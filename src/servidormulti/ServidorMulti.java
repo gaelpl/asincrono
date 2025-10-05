@@ -18,6 +18,7 @@ public class ServidorMulti {
             Thread hilo = new Thread(unCliente);
             clientes.put(Integer.toString(contador), unCliente);
             hilo.start();
+            System.out.println("Se conecto el wey n: "+contador);
             contador++;
         }
     }
