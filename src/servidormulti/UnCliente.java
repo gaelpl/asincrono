@@ -11,15 +11,17 @@ public class UnCliente implements Runnable {
     final DataOutputStream salida;
     final BufferedReader teclado = new BufferedReader(new InputStreamReader(System.in));
     final DataInputStream entrada;
+    String nombreHilo;
 
-    UnCliente(Socket s) throws IOException {
+    UnCliente(Socket s, String nombreHilo) throws IOException {
         salida = new DataOutputStream(s.getOutputStream());
         entrada = new DataInputStream(s.getInputStream());
-
+        this.nombreHilo = nombreHilo;
     }
 
     @Override
     public void run() {
+        String nombreHilo = Thread.currentThread().getName();
         String mensaje;
         while (true) {
             try {
@@ -32,7 +34,13 @@ public class UnCliente implements Runnable {
                         mensaje = entrada.readUTF();
                         for (UnCliente cliente : ServidorMulti.clientes.values()) {
                             // puedes obtener nombre del hilo con Thread.currentThread().getName()
-                            cliente.salida.writeUTF("@" + Thread.currentThread().getName() + ": " + mensaje);
+                            // if(Thread.currentThread().getName() = cliente.salida) continue;
+                            if (cliente.nombreHilo.equals(this.nombreHilo)) {
+                                continue;
+                            }
+
+                            // continue;
+                            cliente.salida.writeUTF("@" + this.nombreHilo + ": " + mensaje);
                         }
                         break;
 

@@ -14,9 +14,11 @@ public class ServidorMulti {
         int contador = 0;
         while (true) {
             Socket s = servidorSocket.accept();
-            UnCliente unCliente = new UnCliente(s);
+            // asigno nombre al hilo para que el mismo cliente sepa cual es su identificador
+            String nombreHilo = Integer.toString(contador);
+            UnCliente unCliente = new UnCliente(s, nombreHilo);
             // al hilo se le puede poner nombre con una coma y lo que sigue
-            Thread hilo = new Thread(unCliente, "Cliente " + Integer.toString(contador));
+            Thread hilo = new Thread(unCliente, "Cliente " + nombreHilo);
             clientes.put(Integer.toString(contador), unCliente);
             hilo.start();
             System.out.println("Se conecto el wey n: " + contador);
