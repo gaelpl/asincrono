@@ -23,8 +23,10 @@ public class UnCliente implements Runnable {
     public void run() {
         String nombreHilo = Thread.currentThread().getName();
         String mensaje;
-        while (true) {
-            try {
+        boolean existe = false;
+        // ahora el while va dentro del try
+        try {
+            while (!existe) {
                 this.salida.writeUTF(
                         "Elige la opcion 1:si quieres mandar mensaje general, 2:un usuario en especifico, 3:varios usuarios?");
                 mensaje = entrada.readUTF();
@@ -86,8 +88,8 @@ public class UnCliente implements Runnable {
                     default:
                         break;
                 }
-            } catch (Exception ex) {
             }
+        } catch (Exception ex) {
         }
     }
 

@@ -9,7 +9,6 @@ import java.net.Socket;
 
 public class Registro implements Runnable {
     final DataOutputStream salida;
-    final BufferedReader teclado = new BufferedReader(new InputStreamReader(System.in));
     final DataInputStream entrada;
 
     public Registro(Socket s) throws IOException {
@@ -28,16 +27,17 @@ public class Registro implements Runnable {
     }
 
     // metodo para manejar los registros de usuarios
+    // cambiamos el buferreader por data inputstream
     private void manejarRegistro() throws IOException {
         salida.writeUTF("Elige un usuario:");
-        String nuevoUsuario = teclado.readLine();
+        String nuevoUsuario = entrada.readUTF();
 
         // buscamos si el usuario existe
         if (ServidorMulti.usuarios.containsKey(nuevoUsuario)) {
             salida.writeUTF("El usuario ya existe. Intenta iniciar sesion.");
         } else {
             salida.writeUTF("Elige una contrasena:");
-            String nuevaContrasena = teclado.readLine();
+            String nuevaContrasena = entrada.readUTF();
             ServidorMulti.usuarios.put(nuevoUsuario, nuevaContrasena);
             // falta el metodo guardarUsuarios
             guardarUsuarios();
