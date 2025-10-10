@@ -7,23 +7,13 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 
-public class Registro implements Runnable {
+public class Registro {
     final DataOutputStream salida;
     final DataInputStream entrada;
 
     public Registro(Socket s) throws IOException {
         salida = new DataOutputStream(s.getOutputStream());
         entrada = new DataInputStream(s.getInputStream());
-    }
-
-    @Override
-    public void run() {
-        try {
-            manejarRegistro();
-        } catch (IOException e) {
-            System.out.println("Error en el registro: " + e.getMessage());
-        }
-
     }
 
     // metodo para manejar los registros de usuarios
