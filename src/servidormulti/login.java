@@ -10,11 +10,11 @@ import java.net.Socket;
 public class login {
     private String usuarioAutenticado;
 
-    private boolean manejarLogin(DataOutputStream salida, DataInputStream teclado) throws IOException {
+    public boolean manejarLogin(DataOutputStream salida, DataInputStream entrada) throws IOException {
         salida.writeUTF("Introduce tu usuario:");
-        String usuario = teclado.readUTF();
+        String usuario = entrada.readUTF();
         salida.writeUTF("Introduce tu contrasena:");
-        String contrasena = teclado.readUTF();
+        String contrasena = entrada.readUTF();
 
         if (ServidorMulti.usuarios.containsKey(usuario) && ServidorMulti.usuarios.get(usuario).equals(contrasena)) {
             this.usuarioAutenticado = usuario;

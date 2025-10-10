@@ -8,17 +8,9 @@ import java.io.InputStreamReader;
 import java.net.Socket;
 
 public class Registro {
-    final DataOutputStream salida;
-    final DataInputStream entrada;
-
-    public Registro(Socket s) throws IOException {
-        salida = new DataOutputStream(s.getOutputStream());
-        entrada = new DataInputStream(s.getInputStream());
-    }
-
     // metodo para manejar los registros de usuarios
     // cambiamos el buferreader por data inputstream
-    private void manejarRegistro() throws IOException {
+    public void manejarRegistro(DataOutputStream salida, DataInputStream entrada) throws IOException {
         salida.writeUTF("Elige un usuario:");
         String nuevoUsuario = entrada.readUTF();
 
