@@ -24,11 +24,42 @@ public class UnCliente implements Runnable {
         String nombreHilo = Thread.currentThread().getName();
         String mensaje;
         boolean existe = false;
+        login login = new login();
+        Registro registro = new Registro();
+        int intentos = 0;
+        boolean denegado = false;
         // ahora el while va dentro del try
         try {
-            while (!existe) {
-                this.salida.writeUTF(
-                        "Elige la opcion 1:si quieres mandar mensaje general, 2:un usuario en especifico, 3:varios usuarios?");
+
+            while (true) {
+                //primera verificacon si es que no existe y ya se le acabaron los mensajes anonimos
+                if(!existe && intentos >=3){
+                    salida.writeUTF("se te acabaron los mensajes, inicia sesion o registrate");
+                }
+
+                //si no existe lo fuerzo a que escoja una opcion
+                while (!existe) {
+                //logica para login o registro
+                salida.writeUTF("Bienvenido. Escribe 'login' para iniciar sesion o 'register' para crear cuenta.");
+                    String accion = entrada.readUTF();
+
+                    if (accion == null) {
+                        break;
+                    }
+                    if ("login".equalsIgnoreCase(accion)) {
+                        existe = login.manejarLogin(salida, entrada);
+                    } else if ("register".equalsIgnoreCase(accion)) {
+                        registro.manejarRegistro(salida, entrada);
+                    } else {
+                        salida.writeUTF("Accion no reconocida. Intenta de nuevo.");
+                    }
+                }
+                if(existe) {
+                         salida.writeUTF("¡Inicio de sesión exitoso! Puedes enviar mensajes ilimitados.");
+                    }
+                }
+                //logica para enviar mensajes
+                this.   salida.writeUTF("Elige la opcion 1:si quieres mandar mensaje general, 2:un usuario en especifico, 3:varios usuarios?");
                 mensaje = entrada.readUTF();
                 switch (mensaje) {
                     case "1":
@@ -88,9 +119,9 @@ public class UnCliente implements Runnable {
                     default:
                         break;
                 }
-            }
-        } catch (Exception ex) {
+            }catch (Exception ex) {
+        } 
         }
     }
 
-}
+
