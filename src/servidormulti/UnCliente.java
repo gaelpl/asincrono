@@ -12,6 +12,9 @@ public class UnCliente implements Runnable {
     final BufferedReader teclado = new BufferedReader(new InputStreamReader(System.in));
     final DataInputStream entrada;
     String nombreHilo;
+    private int intentos = 0;
+    private final int intentosMaximos = 3;
+    boolean existe = false;
 
     UnCliente(Socket s, String nombreHilo) throws IOException {
         salida = new DataOutputStream(s.getOutputStream());
@@ -26,8 +29,6 @@ public class UnCliente implements Runnable {
         boolean existe = false;
         login login = new login();
         Registro registro = new Registro();
-        int intentos = 0;
-        boolean denegado = false;
         // ahora el while va dentro del try
         try {
 
@@ -57,10 +58,16 @@ public class UnCliente implements Runnable {
                 if(existe) {
                          salida.writeUTF("¡Inicio de sesión exitoso! Puedes enviar mensajes ilimitados.");
                     }
+
+
+                    //boolean que verifica si puede mandar mensajes
+                boolean puedeMandar = existe || (intentos < intentosMaximos);
+
+                if(puedeMandar){
+                    this.   salida.writeUTF("Elige la opcion 1:si quieres mandar mensaje general, 2:un usuario en especifico, 3:varios usuarios?");
+                mensaje = entrada.readUTF();
                 }
                 //logica para enviar mensajes
-                this.   salida.writeUTF("Elige la opcion 1:si quieres mandar mensaje general, 2:un usuario en especifico, 3:varios usuarios?");
-                mensaje = entrada.readUTF();
                 switch (mensaje) {
                     case "1":
                         this.salida.writeUTF("Escribe tu mensaje para todos");
@@ -119,6 +126,7 @@ public class UnCliente implements Runnable {
                     default:
                         break;
                 }
+                }   
             }catch (Exception ex) {
         } 
         }
