@@ -25,7 +25,7 @@ public class UnCliente implements Runnable {
     @Override
     public void run() {
         String nombreHilo = Thread.currentThread().getName();
-        String mensaje;
+        String mensaje = "";
         boolean existe = false;
         login login = new login();
         Registro registro = new Registro();
@@ -60,7 +60,7 @@ public class UnCliente implements Runnable {
                     }
 
 
-                    //boolean que verifica si puede mandar mensajes
+                //boolean que verifica si puede mandar mensajes
                 boolean puedeMandar = existe || (intentos < intentosMaximos);
 
                 if(puedeMandar){
@@ -68,6 +68,7 @@ public class UnCliente implements Runnable {
                 mensaje = entrada.readUTF();
                 }
                 //logica para enviar mensajes
+                boolean mensajeValido = false;
                 switch (mensaje) {
                     case "1":
                         this.salida.writeUTF("Escribe tu mensaje para todos");
@@ -124,8 +125,18 @@ public class UnCliente implements Runnable {
                         break;
 
                     default:
+                    salida.writeUTF("opcion no reconocida");
                         break;
                 }
+
+                //aumentamos el contador si se envio el mensaje aninimo
+                 if (mensajeValido && !existe) {
+                        intentos++;
+                        int restantes = intentosMaximos - intentos;
+                        if (restantes > 0) {
+                            this.salida.writeUTF("Tienes " + restantes + " mensajes restantes antes de requerir login/registro.");
+                        }
+                    }
                 }   
             }catch (Exception ex) {
         } 
