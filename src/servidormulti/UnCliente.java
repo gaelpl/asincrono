@@ -11,7 +11,7 @@ public class UnCliente implements Runnable {
     final DataOutputStream salida;
     final BufferedReader teclado = new BufferedReader(new InputStreamReader(System.in));
     final DataInputStream entrada;
-    String nombreHilo;
+    String nombreHilo = Thread.currentThread().getName();
     private int intentos = 0;
     private final int intentosMaximos = 3;
     boolean existe = false;
@@ -24,9 +24,7 @@ public class UnCliente implements Runnable {
 
     @Override
     public void run() {
-        String nombreHilo = Thread.currentThread().getName();
         String mensaje = "";
-        boolean existe = false;
         login login = new login();
         Registro registro = new Registro();
         // ahora el while va dentro del try
@@ -137,6 +135,10 @@ public class UnCliente implements Runnable {
                             this.salida.writeUTF("Tienes " + restantes + " mensajes restantes antes de requerir login/registro.");
                         }
                     }
+                    //si ya se acabo el limite y no existe
+                    else {
+                    this.salida.writeUTF("se te acabaron los mensajes.");
+                }
                 }   
             }catch (Exception ex) {
         } 
