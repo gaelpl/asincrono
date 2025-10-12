@@ -11,7 +11,7 @@ public class UnCliente implements Runnable {
     final DataOutputStream salida;
     final BufferedReader teclado = new BufferedReader(new InputStreamReader(System.in));
     final DataInputStream entrada;
-    String nombreHilo ;
+    String nombreHilo;
     private int intentos = 0;
     private final int intentosMaximos = 3;
     boolean existe = false;
@@ -31,32 +31,12 @@ public class UnCliente implements Runnable {
         try {
 
             while (true) {
-                // primera verificacon si es que no existe y ya se le acabaron los mensajes
-                // anonimos
+                // primera verificacon si es que no existe y ya se le acabaron los mensajes anonimos
                 if (!existe && intentos >= intentosMaximos) {
                     salida.writeUTF("se te acabaron los mensajes, inicia sesion o registrate");
 
                     // si no existe lo fuerzo a que escoja una opcion
-                    while (!existe) {
-                        // logica para login o registro
-                        salida.writeUTF(
-                                "Bienvenido. Escribe 'login' para iniciar sesion o 'register' para crear cuenta.");
-                        String accion = entrada.readUTF();
-
-                        if (accion == null) {
-                            break;
-                        }
-                        if ("login".equalsIgnoreCase(accion)) {
-                            existe = login.manejarLogin(salida, entrada);
-                        } else if ("register".equalsIgnoreCase(accion)) {
-                            registro.manejarRegistro(salida, entrada);
-                        } else {
-                            salida.writeUTF("Accion no reconocida. Intenta de nuevo.");
-                        }
-                    }
-                    if (existe) {
-                        salida.writeUTF("¡Inicio de sesión exitoso! Puedes enviar mensajes ilimitados.");
-                    }
+                    exigirLoginRegister(login, registro);
                 }
 
                 // boolean que verifica si puede mandar mensajes
@@ -68,7 +48,7 @@ public class UnCliente implements Runnable {
                     mensaje = entrada.readUTF();
                 } else {
                     this.salida.writeUTF("Solo puedes recibir mensajes. Por favor, autentícate para enviar.");
-                    continue; 
+                    continue;
                 }
                 // logica para enviar mensajes
                 boolean mensajeValido = false;
@@ -148,4 +128,26 @@ public class UnCliente implements Runnable {
         } catch (Exception ex) {
         }
     }
+
+    private void exigirLoginRegister(login login, Registro registro) throws IOException {
+        while (!existe) {
+            salida.writeUTF("Bienvenido. Escribe 'login' para iniciar sesion o 'register' para crear cuenta.");
+            String accion = entrada.readUTF();
+
+            if (accion == null) {
+                break;
+            }
+            if ("login".equalsIgnoreCase(accion)) {
+                existe = login.manejarLogin(salida, entrada);
+            } else if ("register".equalsIgnoreCase(accion)) {
+                registro.manejarRegistro(salida, entrada);
+            } else {
+                salida.writeUTF("Accion no reconocida. Intenta de nuevo.");
+            }
+        }
+        if (existe) {
+            salida.writeUTF("¡Inicio de sesión exitoso! Puedes enviar mensajes ilimitados.");
+        }
+    }
+
 }
