@@ -81,6 +81,7 @@ public class UnCliente implements Runnable {
                             // continue;
                             cliente.salida.writeUTF("@" + this.nombreHilo + ": " + mensaje);
                         }
+                        mensajeValido = true;
                         break;
 
                     case "2":
@@ -98,6 +99,7 @@ public class UnCliente implements Runnable {
                                 cliente.salida.writeUTF(contenidoMensaje);
                             }
                         }
+                        mensajeValido = true;
                         break;
 
                     case "3":
@@ -119,6 +121,7 @@ public class UnCliente implements Runnable {
                                 cliente.salida.writeUTF(contenidoMensaje);
                             }
                         }
+                        mensajeValido = true;
 
                         break;
 
