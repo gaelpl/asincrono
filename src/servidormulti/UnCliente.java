@@ -57,21 +57,7 @@ public class UnCliente implements Runnable {
                         break;
 
                     case "2":
-                        this.salida.writeUTF("Escribe a quien quieres mandar mensaje (pon @numeroDeUsuario al inicio)");
-                        mensaje = entrada.readUTF();
-                        this.salida.writeUTF("Escribe tu mensaje");
-                        String contenidoMensaje = entrada.readUTF();
-                        if (mensaje.startsWith("@")) {
-                            String[] partes = mensaje.split(" ");
-                            String aQuien = partes[0].substring(1);
-                            UnCliente cliente = ServidorMulti.clientes.get(aQuien);
-                            cliente.salida.writeUTF("@" + Thread.currentThread().getName() + ": " + contenidoMensaje);
-                        } else {
-                            for (UnCliente cliente : ServidorMulti.clientes.values()) {
-                                cliente.salida.writeUTF(contenidoMensaje);
-                            }
-                        }
-                        mensajeValido = true;
+                        mensajeValido = enviarMensajePrivado();
                         break;
 
                     case "3":
@@ -79,7 +65,7 @@ public class UnCliente implements Runnable {
                                 "Escribe a quienes quieres mandar mensaje, pon @numeroDeUsuario separados por comas al inicio");
                         mensaje = entrada.readUTF();
                         this.salida.writeUTF("Escribe tu mensaje");
-                        contenidoMensaje = entrada.readUTF();
+                        String contenidoMensaje = entrada.readUTF();
                         if (mensaje.startsWith("@")) {
                             String[] partes = mensaje.split(",");
                             for (int i = 0; i < partes.length; i++) {
@@ -147,6 +133,24 @@ public class UnCliente implements Runnable {
                             cliente.salida.writeUTF("@" + this.nombreHilo + ": " + mensaje);
                         }
                         return  true;
+    }
+
+    private boolean enviarMensajePrivado() throws IOException {
+        this.salida.writeUTF("Escribe a quien quieres mandar mensaje (pon @numeroDeUsuario al inicio)");
+                        String mensaje = entrada.readUTF();
+                        this.salida.writeUTF("Escribe tu mensaje");
+                        String contenidoMensaje = entrada.readUTF();
+                        if (mensaje.startsWith("@")) {
+                            String[] partes = mensaje.split(" ");
+                            String aQuien = partes[0].substring(1);
+                            UnCliente cliente = ServidorMulti.clientes.get(aQuien);
+                            cliente.salida.writeUTF("@" + Thread.currentThread().getName() + ": " + contenidoMensaje);
+                        } else {
+                            for (UnCliente cliente : ServidorMulti.clientes.values()) {
+                                cliente.salida.writeUTF(contenidoMensaje);
+                            }
+                        }
+                        return true;
     }
 
 }
