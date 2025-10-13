@@ -61,26 +61,7 @@ public class UnCliente implements Runnable {
                         break;
 
                     case "3":
-                        this.salida.writeUTF(
-                                "Escribe a quienes quieres mandar mensaje, pon @numeroDeUsuario separados por comas al inicio");
-                        mensaje = entrada.readUTF();
-                        this.salida.writeUTF("Escribe tu mensaje");
-                        String contenidoMensaje = entrada.readUTF();
-                        if (mensaje.startsWith("@")) {
-                            String[] partes = mensaje.split(",");
-                            for (int i = 0; i < partes.length; i++) {
-                                String aQuien = partes[i].substring(1);
-                                UnCliente cliente = ServidorMulti.clientes.get(aQuien);
-                                cliente.salida
-                                        .writeUTF("@" + Thread.currentThread().getName() + ": " + contenidoMensaje);
-                            }
-                        } else {
-                            for (UnCliente cliente : ServidorMulti.clientes.values()) {
-                                cliente.salida.writeUTF(contenidoMensaje);
-                            }
-                        }
-                        mensajeValido = true;
-
+                        mensajeValido = enviarMensajeVarios();
                         break;
 
                     default:
@@ -145,6 +126,27 @@ public class UnCliente implements Runnable {
                             String aQuien = partes[0].substring(1);
                             UnCliente cliente = ServidorMulti.clientes.get(aQuien);
                             cliente.salida.writeUTF("@" + Thread.currentThread().getName() + ": " + contenidoMensaje);
+                        } else {
+                            for (UnCliente cliente : ServidorMulti.clientes.values()) {
+                                cliente.salida.writeUTF(contenidoMensaje);
+                            }
+                        }
+                        return true;
+    }
+
+    private boolean enviarMensajeVarios() throws IOException {
+        this.salida.writeUTF("Escribe a quienes quieres mandar mensaje, pon @numeroDeUsuario separados por comas al inicio");
+                       String mensaje = entrada.readUTF();
+                        this.salida.writeUTF("Escribe tu mensaje");
+                        String contenidoMensaje = entrada.readUTF();
+                        if (mensaje.startsWith("@")) {
+                            String[] partes = mensaje.split(",");
+                            for (int i = 0; i < partes.length; i++) {
+                                String aQuien = partes[i].substring(1);
+                                UnCliente cliente = ServidorMulti.clientes.get(aQuien);
+                                cliente.salida
+                                        .writeUTF("@" + Thread.currentThread().getName() + ": " + contenidoMensaje);
+                            }
                         } else {
                             for (UnCliente cliente : ServidorMulti.clientes.values()) {
                                 cliente.salida.writeUTF(contenidoMensaje);
