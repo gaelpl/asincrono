@@ -43,8 +43,7 @@ public class UnCliente implements Runnable {
                 boolean puedeMandar = existe || (intentos < intentosMaximos);
 
                 if (puedeMandar) {
-                    this.salida.writeUTF(
-                            "Elige la opcion 1:si quieres mandar mensaje general, 2:un usuario en especifico, 3:varios usuarios?");
+                    this.salida.writeUTF("Elige la opcion 1:si quieres mandar mensaje general, 2:un usuario en especifico, 3:varios usuarios?");
                     mensaje = entrada.readUTF();
                 } else {
                     this.salida.writeUTF("Solo puedes recibir mensajes. Por favor, autentícate para enviar.");
@@ -54,19 +53,7 @@ public class UnCliente implements Runnable {
                 boolean mensajeValido = false;
                 switch (mensaje) {
                     case "1":
-                        this.salida.writeUTF("Escribe tu mensaje para todos");
-                        mensaje = entrada.readUTF();
-                        for (UnCliente cliente : ServidorMulti.clientes.values()) {
-                            // puedes obtener nombre del hilo con Thread.currentThread().getName()
-                            // if(Thread.currentThread().getName() = cliente.salida) continue;
-                            if (cliente.nombreHilo.equals(this.nombreHilo)) {
-                                continue;
-                            }
-
-                            // continue;
-                            cliente.salida.writeUTF("@" + this.nombreHilo + ": " + mensaje);
-                        }
-                        mensajeValido = true;
+                        mensajeValido = enviarMensajeGeneral();
                         break;
 
                     case "2":
@@ -148,6 +135,18 @@ public class UnCliente implements Runnable {
         if (existe) {
             salida.writeUTF("¡Inicio de sesión exitoso! Puedes enviar mensajes ilimitados.");
         }
+    }
+
+    private boolean enviarMensajeGeneral() throws IOException {
+        this.salida.writeUTF("Escribe tu mensaje para todos");
+                        String mensaje = entrada.readUTF();
+                        for (UnCliente cliente : ServidorMulti.clientes.values()) {
+                            if (cliente.nombreHilo.equals(this.nombreHilo)) {
+                                continue;
+                            }
+                            cliente.salida.writeUTF("@" + this.nombreHilo + ": " + mensaje);
+                        }
+                        return  true;
     }
 
 }
