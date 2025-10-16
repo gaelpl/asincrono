@@ -1,6 +1,7 @@
 package servidormulti;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 public class SQLite {
@@ -36,5 +37,20 @@ private Connection conectar() throws SQLException {
                 + "FOREIGN KEY (bloqueado) REFERENCES USUARIOS(usuario) ON DELETE CASCADE,"
                 + "PRIMARY KEY (bloqueador, bloqueado)"
                 + ");";
+    
+        //llamo al metodo conectar
+    try (Connection conn = conectar();
+            //PreparedStatement es un objeto que representa una sentencia SQL precompilada
+             PreparedStatement pstmtUsuarios = conn.prepareStatement(sqlUsuarios);
+             PreparedStatement pstmtBloqueos = conn.prepareStatement(sqlBloqueos)) {
+            
+            pstmtUsuarios.executeUpdate();
+            pstmtBloqueos.executeUpdate();
+            System.out.println("comandos ejecutados.");
+            
+        } catch (SQLException e) {
+            System.err.println("Error FATAL al crear las tablas: " + e.getMessage());
+        }
     }
 }
+
