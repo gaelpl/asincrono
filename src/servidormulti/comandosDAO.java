@@ -32,4 +32,20 @@ public class comandosDAO {
             return pstmt.executeUpdate() > 0;
         }
     }
+
+    public String autenticarUsuario(String usuario, String contrasena) throws SQLException {
+        String sql = "SELECT usuario FROM USUARIOS WHERE usuario = ? AND contrasena = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, usuario);
+            pstmt.setString(2, contrasena);
+            ResultSet rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                return rs.getString("usuario");
+            }
+            return null;
+        }
+    }
 }
