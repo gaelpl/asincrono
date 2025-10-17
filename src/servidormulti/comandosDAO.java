@@ -48,4 +48,15 @@ public class comandosDAO {
             return null;
         }
     }
+
+    public boolean bloquearUsuario(String bloqueador, String bloqueado) throws SQLException {
+    String sql = "INSERT INTO BLOQUEOS (bloqueador, bloqueado) VALUES (?, ?)";
+    try (Connection conn = getConnection();
+         PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        
+        pstmt.setString(1, bloqueador);
+        pstmt.setString(2, bloqueado);
+        return pstmt.executeUpdate() > 0;
+    }
+}
 }
