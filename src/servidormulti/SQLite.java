@@ -20,7 +20,7 @@ public class SQLite {
     
 }
 
-private Connection conectar() throws SQLException {
+public Connection conectar() throws SQLException {
         return DriverManager.getConnection(URL);
     }
 
