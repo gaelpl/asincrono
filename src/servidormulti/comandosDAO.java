@@ -57,6 +57,18 @@ public class comandosDAO {
         pstmt.setString(1, bloqueador);
         pstmt.setString(2, bloqueado);
         return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    public boolean desbloquearUsuario(String bloqueador, String bloqueado) throws SQLException {
+    String sql = "DELETE FROM BLOQUEOS WHERE bloqueador = ? AND bloqueado = ?";
+    try (Connection conn = getConnection();
+         PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        
+        pstmt.setString(1, bloqueador);
+        pstmt.setString(2, bloqueado);
+        return pstmt.executeUpdate() > 0;
     }
 }
+
 }
