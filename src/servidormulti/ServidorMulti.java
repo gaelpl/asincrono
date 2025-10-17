@@ -10,6 +10,12 @@ public class ServidorMulti {
     static HashMap<String, UnCliente> clientes = new HashMap<String, UnCliente>();
     // mapa para registrar y guardar usuarios y contraseñas
     static HashMap<String, String> usuarios = new HashMap<String, String>();
+    // instancia de la clase SQLite
+    private static SQLite manejador;
+
+    public static SQLite getManejador() {
+        return manejador;
+    }
 
     public static void main(String[] args) throws IOException {
         ServerSocket servidorSocket = new ServerSocket(8080);
