@@ -6,27 +6,27 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class comandosDAO {
-    
+
     private Connection getConnection() throws SQLException {
         return ServidorMulti.getManejador().conectar();
     }
 
     public boolean verificarUsuarioExistente(String usuario) throws SQLException {
         String sql = "SELECT usuario FROM USUARIOS WHERE usuario = ?";
-        try (Connection conn = getConnection(); 
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
+        try (Connection conn = getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
             pstmt.setString(1, usuario);
             ResultSet rs = pstmt.executeQuery();
-            return rs.next(); 
+            return rs.next();
         }
     }
 
     public boolean guardarNuevoUsuario(String usuario, String contrasena) throws SQLException {
         String sql = "INSERT INTO USUARIOS (usuario, contrasena) VALUES (?, ?)";
         try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
             pstmt.setString(1, usuario);
             pstmt.setString(2, contrasena);
             return pstmt.executeUpdate() > 0;
@@ -36,12 +36,12 @@ public class comandosDAO {
     public String autenticarUsuario(String usuario, String contrasena) throws SQLException {
         String sql = "SELECT usuario FROM USUARIOS WHERE usuario = ? AND contrasena = ?";
         try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
             pstmt.setString(1, usuario);
             pstmt.setString(2, contrasena);
             ResultSet rs = pstmt.executeQuery();
-            
+
             if (rs.next()) {
                 return rs.getString("usuario");
             }
@@ -50,25 +50,37 @@ public class comandosDAO {
     }
 
     public boolean bloquearUsuario(String bloqueador, String bloqueado) throws SQLException {
-    String sql = "INSERT INTO BLOQUEOS (bloqueador, bloqueado) VALUES (?, ?)";
-    try (Connection conn = getConnection();
-         PreparedStatement pstmt = conn.prepareStatement(sql)) {
-        
-        pstmt.setString(1, bloqueador);
-        pstmt.setString(2, bloqueado);
-        return pstmt.executeUpdate() > 0;
+        String sql = "INSERT INTO BLOQUEOS (bloqueador, bloqueado) VALUES (?, ?)";
+        try (Connection conn = getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, bloqueador);
+            pstmt.setString(2, bloqueado);
+            return pstmt.executeUpdate() > 0;
         }
     }
 
     public boolean desbloquearUsuario(String bloqueador, String bloqueado) throws SQLException {
-    String sql = "DELETE FROM BLOQUEOS WHERE bloqueador = ? AND bloqueado = ?";
-    try (Connection conn = getConnection();
-         PreparedStatement pstmt = conn.prepareStatement(sql)) {
-        
-        pstmt.setString(1, bloqueador);
-        pstmt.setString(2, bloqueado);
-        return pstmt.executeUpdate() > 0;
+        String sql = "DELETE FROM BLOQUEOS WHERE bloqueador = ? AND bloqueado = ?";
+        try (Connection conn = getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, bloqueador);
+            pstmt.setString(2, bloqueado);
+            return pstmt.executeUpdate() > 0;
+        }
     }
-}
+
+    public boolean estaBloqueadoPor(String emisor, String receptor) throws SQLException {
+        String sql = "SELECT 1 FROM BLOQUEOS WHERE bloqueador = ? AND bloqueado = ?";
+        try (Connection conn = getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, receptor);
+            pstmt.setString(2, emisor);
+            ResultSet rs = pstmt.executeQuery();
+            return rs.next();
+        }
+    }
 
 }
