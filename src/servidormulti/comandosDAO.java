@@ -21,4 +21,15 @@ public class comandosDAO {
             return rs.next(); 
         }
     }
+
+    public boolean guardarNuevoUsuario(String usuario, String contrasena) throws SQLException {
+        String sql = "INSERT INTO USUARIOS (usuario, contrasena) VALUES (?, ?)";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, usuario);
+            pstmt.setString(2, contrasena);
+            return pstmt.executeUpdate() > 0;
+        }
+    }
 }
