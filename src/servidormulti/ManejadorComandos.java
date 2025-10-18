@@ -7,13 +7,20 @@ import java.sql.SQLException;
 public class ManejadorComandos {
     
     private final comandosDAO comando;
-    private final String nombreHilo;
+    private final String nombreHilo; 
     private final DataOutputStream salida;
+    
+    private String usuarioAutenticado; 
     
     public ManejadorComandos(comandosDAO comando, String nombreHilo, DataOutputStream salida) {
         this.comando = comando;
         this.nombreHilo = nombreHilo;
         this.salida = salida;
+        this.usuarioAutenticado = nombreHilo; 
+    }
+
+    public void setUsuarioAutenticado(String usuario) {
+        this.usuarioAutenticado = usuario;
     }
 
     public boolean manejarComandoDeBloqueo(String input) throws IOException, SQLException {
@@ -30,21 +37,25 @@ public class ManejadorComandos {
     }
 
     private boolean manejarBloqueo(String idDestino) throws IOException, SQLException {
+        String bloqueadorDB = this.usuarioAutenticado; 
+        
         if (idDestino.equals(this.nombreHilo)) {
             salida.writeUTF("Error: No puedes bloquearte a ti mismo.");
             return true;
         }
         
         if (!ServidorMulti.clientes.containsKey(idDestino)) {
-            salida.writeUTF("Error: El usuario @" + idDestino + " no existe.");
+            salida.writeUTF("Error: El usuario @" + idDestino + " no existe o no está conectado.");
             return true;
         }
         
         try {
-            if (comando.bloquearUsuario(this.nombreHilo, idDestino)) {
-                salida.writeUTF("Has bloqueado a @" + idDestino + ".");
+            if (comando.bloquearUsuario(bloqueadorDB, idDestino)) { 
+                UnCliente cliente = ServidorMulti.clientes.get(idDestino);
+                String idVisible = cliente != null ? cliente.nombreHilo : idDestino;
+                salida.writeUTF("Has bloqueado a @" + idVisible + ".");
             } else {
-                salida.writeUTF("Ya habías bloqueado a @" + idDestino + ".");
+                salida.writeUTF("Advertencia: Ya habías bloqueado a @" + idDestino + ".");
             }
             return true; 
         } catch (SQLException e) {
@@ -55,10 +66,14 @@ public class ManejadorComandos {
     }
 
     private boolean manejarDesbloqueo(String idDestino) throws IOException, SQLException {
-        if (comando.desbloquearUsuario(this.nombreHilo, idDestino)) {
-            salida.writeUTF("Has desbloqueado a @" + idDestino + ".");
+        String bloqueadorDB = this.usuarioAutenticado;
+        
+        if (comando.desbloquearUsuario(bloqueadorDB, idDestino)) { 
+            UnCliente cliente = ServidorMulti.clientes.get(idDestino);
+            String idVisible = cliente != null ? cliente.nombreHilo : idDestino;
+            salida.writeUTF("Has desbloqueado a @" + idVisible + ".");
         } else {
-            salida.writeUTF("Error: @" + idDestino + " no estaba bloqueado.");
+            salida.writeUTF("Error: @" + idDestino + " no estaba bloqueado por ti."); 
         }
         return true;
     }
