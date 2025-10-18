@@ -6,7 +6,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
-import java.sql.SQLException; 
+import java.sql.SQLException;
 
 public class UnCliente implements Runnable {
 	final DataOutputStream salida;
@@ -16,6 +16,7 @@ public class UnCliente implements Runnable {
 	private int intentos = 0;
 	private final int intentosMaximos = 3;
 	boolean existe = false;
+	
 	private final comandosDAO comandos = new comandosDAO();
 	private ManejadorComandos manejador;
 
@@ -98,7 +99,7 @@ public class UnCliente implements Runnable {
 			try {
 				if (entrada != null) entrada.close();
 				if (salida != null) salida.close();
-			} catch (IOException e) { }
+			} catch (IOException e) {  }
 			ServidorMulti.clientes.remove(this.nombreHilo);
 		}
 	 }
@@ -129,50 +130,81 @@ public class UnCliente implements Runnable {
 		 String mensaje = entrada.readUTF();
 		 for (UnCliente cliente : ServidorMulti.clientes.values()) {
 			 if (cliente.nombreHilo.equals(this.nombreHilo)) {
-				 return true;
+				 continue;
 			 }
-			 cliente.salida.writeUTF("@" + this.nombreHilo + ": " + mensaje);
+			 
+			 try {
+				if (comandos.estaBloqueadoPor(this.nombreHilo, cliente.nombreHilo)) {
+					continue; 
+				}
+				
+				cliente.salida.writeUTF("@" + this.nombreHilo + ": " + mensaje);
+			 } catch (SQLException e) {
+				System.err.println("Error DB al verificar bloqueo para " + cliente.nombreHilo + ": " + e.getMessage());
+			 }
 		 }
 		 return true;
 	 }
 
 	 private boolean enviarMensajePrivado() throws IOException {
 		 this.salida.writeUTF("Escribe a quien quieres mandar mensaje (pon @numeroDeUsuario al inicio)");
-		 String mensaje = entrada.readUTF();
+		 String destinatarioEntrada = entrada.readUTF();
 		 this.salida.writeUTF("Escribe tu mensaje");
 		 String contenidoMensaje = entrada.readUTF();
-		 if (mensaje.startsWith("@")) {
-			 String[] partes = mensaje.split(" ");
-			 String aQuien = partes[0].substring(1);
+		 
+		 if (destinatarioEntrada.startsWith("@")) {
+			 String aQuien = destinatarioEntrada.trim().substring(1).split(" ")[0];
 			 UnCliente cliente = ServidorMulti.clientes.get(aQuien);
-			 cliente.salida.writeUTF("@" + Thread.currentThread().getName() + ": " + contenidoMensaje);
-		 } else {
-			 for (UnCliente cliente : ServidorMulti.clientes.values()) {
-				 cliente.salida.writeUTF(contenidoMensaje);
+			 
+			 if (cliente == null) {
+				 this.salida.writeUTF("Error: Usuario @" + aQuien + " no encontrado o desconectado.");
+				 return false;
 			 }
+
+			 try {
+				if (comandos.estaBloqueadoPor(this.nombreHilo, cliente.nombreHilo)) {
+					this.salida.writeUTF("Fallo en el envío: @" + cliente.nombreHilo + " te tiene bloqueado.");
+				} else {
+					cliente.salida.writeUTF("PRIVADO de @" + this.nombreHilo + ": " + contenidoMensaje);
+				}
+			 } catch (SQLException e) {
+				this.salida.writeUTF("Error interno: Fallo en la base de datos al verificar el bloqueo.");
+				System.err.println("Error SQL en privado: " + e.getMessage());
+			 }
+			 return true;
+		 } else {
+			 this.salida.writeUTF("Formato incorrecto para mensaje privado. Intenta usar @ID.");
+			 return false;
 		 }
-		 return true;
 	 }
 
 	 private boolean enviarMensajeVarios() throws IOException {
 		 this.salida.writeUTF("Escribe a quienes quieres mandar mensaje, pon @numeroDeUsuario separados por comas al inicio");
-		 String mensaje = entrada.readUTF();
+		 String destinatariosEntrada = entrada.readUTF();
 		 this.salida.writeUTF("Escribe tu mensaje");
 		 String contenidoMensaje = entrada.readUTF();
-		 if (mensaje.startsWith("@")) {
-			 String[] partes = mensaje.split(",");
+		 
+		 if (destinatariosEntrada.startsWith("@")) {
+			 String[] partes = destinatariosEntrada.split(",");
+			 boolean enviadoAlmenosUno = false;
+			 
 			 for (int i = 0; i < partes.length; i++) {
-				 String aQuien = partes[i].substring(1);
+				 String aQuien = partes[i].substring(1).trim();
 				 UnCliente cliente = ServidorMulti.clientes.get(aQuien);
-				 cliente.salida
-						 .writeUTF("@" + Thread.currentThread().getName() + ": " + contenidoMensaje);
-			 }
-		 } else {
-			 for (UnCliente cliente : ServidorMulti.clientes.values()) {
-				 cliente.salida.writeUTF(contenidoMensaje);
-			 }
-		 }
-		 return true;
-	 }
 
+				 try {
+					if (cliente != null && !comandos.estaBloqueadoPor(this.nombreHilo, cliente.nombreHilo)) {
+						cliente.salida.writeUTF("MSG a varios de @" + this.nombreHilo + ": " + contenidoMensaje);
+						enviadoAlmenosUno = true;
+					}
+				 } catch (SQLException e) {
+					 System.err.println("Error DB al verificar bloqueo en envío a varios: " + e.getMessage());
+				 }
+			 }
+			 return enviadoAlmenosUno;
+		 } else {
+			 this.salida.writeUTF("Formato incorrecto para mensaje a varios. Intenta usar @ID1,@ID2...");
+			 return false;
+		 }
+    }
 }
