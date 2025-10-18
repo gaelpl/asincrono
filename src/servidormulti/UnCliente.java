@@ -36,15 +36,12 @@ public class UnCliente implements Runnable {
 		try {
 
 			while (true) {
-				// primera verificacon si es que no existe y ya se le acabaron los mensajes anonimos
 				if (!existe && intentos >= intentosMaximos) {
 					salida.writeUTF("se te acabaron los mensajes, inicia sesion o registrate");
 
-					// si no existe lo fuerzo a que escoja una opcion
 					exigirLoginRegister(login, registro);
 				}
 
-				// boolean que verifica si puede mandar mensajes
 				boolean puedeMandar = existe || (intentos < intentosMaximos);
 
 				if (puedeMandar) {
@@ -83,7 +80,6 @@ public class UnCliente implements Runnable {
 						break;
 				}
 
-				// aumentamos el contador si se envio el mensaje aninimo
 				if (mensajeValido && !existe) {
 					intentos++;
 					int restantes = intentosMaximos - intentos;
@@ -99,7 +95,7 @@ public class UnCliente implements Runnable {
 			try {
 				if (entrada != null) entrada.close();
 				if (salida != null) salida.close();
-			} catch (IOException e) {  }
+			} catch (IOException e) { }
 			ServidorMulti.clientes.remove(this.nombreHilo);
 		}
 	 }
@@ -135,7 +131,7 @@ public class UnCliente implements Runnable {
 			 
 			 try {
 				if (comandos.estaBloqueadoPor(this.nombreHilo, cliente.nombreHilo)) {
-					continue; 
+					continue;
 				}
 				
 				cliente.salida.writeUTF("@" + this.nombreHilo + ": " + mensaje);
@@ -163,9 +159,9 @@ public class UnCliente implements Runnable {
 
 			 try {
 				if (comandos.estaBloqueadoPor(this.nombreHilo, cliente.nombreHilo)) {
-					this.salida.writeUTF("Fallo en el envío: @" + cliente.nombreHilo + " te tiene bloqueado.");
+					this.salida.writeUTF("Fallo en el envío: " + cliente.nombreHilo + " te tiene bloqueado.");
 				} else {
-					cliente.salida.writeUTF("PRIVADO de @" + this.nombreHilo + ": " + contenidoMensaje);
+					cliente.salida.writeUTF("@" + this.nombreHilo + ": " + contenidoMensaje);
 				}
 			 } catch (SQLException e) {
 				this.salida.writeUTF("Error interno: Fallo en la base de datos al verificar el bloqueo.");
@@ -194,7 +190,7 @@ public class UnCliente implements Runnable {
 
 				 try {
 					if (cliente != null && !comandos.estaBloqueadoPor(this.nombreHilo, cliente.nombreHilo)) {
-						cliente.salida.writeUTF("MSG a varios de @" + this.nombreHilo + ": " + contenidoMensaje);
+						cliente.salida.writeUTF("@" + this.nombreHilo + ": " + contenidoMensaje);
 						enviadoAlmenosUno = true;
 					}
 				 } catch (SQLException e) {
@@ -206,5 +202,5 @@ public class UnCliente implements Runnable {
 			 this.salida.writeUTF("Formato incorrecto para mensaje a varios. Intenta usar @ID1,@ID2...");
 			 return false;
 		 }
-    }
+	 }
 }
