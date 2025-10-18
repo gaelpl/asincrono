@@ -12,7 +12,7 @@ public class UnCliente implements Runnable {
     final DataOutputStream salida;
     final BufferedReader teclado = new BufferedReader(new InputStreamReader(System.in));
     final DataInputStream entrada;
-    String nombreHilo;
+    String nombreHilo; 
     private int intentos = 0;
     private final int intentosMaximos = 3;
     boolean existe = false;
@@ -91,7 +91,7 @@ public class UnCliente implements Runnable {
             try {
                 if (entrada != null) entrada.close();
                 if (salida != null) salida.close();
-            } catch (IOException e) { }
+            } catch (IOException e) { /* Ignorar */ }
             ServidorMulti.clientes.remove(this.nombreHilo);
         }
     }
@@ -107,7 +107,7 @@ public class UnCliente implements Runnable {
             if ("login".equalsIgnoreCase(accion)) {
                 existe = login.manejarLogin(salida, entrada);
                 if (existe) {
-                    manejador.setUsuarioAutenticado(login.getUsuarioAutenticado());
+                    manejador.setUsuarioAutenticado(loginHandler.getUsuarioAutenticado());
                 }
             } else if ("register".equalsIgnoreCase(accion)) {
                 registro.manejarRegistro(salida, entrada);
@@ -123,13 +123,20 @@ public class UnCliente implements Runnable {
     private boolean enviarMensajeGeneral() throws IOException {
         this.salida.writeUTF("Escribe tu mensaje para todos");
         String mensaje = entrada.readUTF();
+        
+        String emisorDB = existe ? loginHandler.getUsuarioAutenticado() : this.nombreHilo; 
+
         for (UnCliente cliente : ServidorMulti.clientes.values()) {
             if (cliente.nombreHilo.equals(this.nombreHilo)) {
                 continue; 
             }
             
             try {
-                if (comandos.estaBloqueadoPor(this.nombreHilo, cliente.nombreHilo)) {
+                boolean bloqueadoPorEmisor = comandos.estaBloqueadoPor(emisorDB, cliente.nombreHilo); 
+
+                boolean bloqueadoPorReceptor = comandos.estaBloqueadoPor(cliente.nombreHilo, emisorDB);
+                
+                if (bloqueadoPorEmisor || bloqueadoPorReceptor) {
                     continue; 
                 }
                 
@@ -147,6 +154,8 @@ public class UnCliente implements Runnable {
         this.salida.writeUTF("Escribe tu mensaje");
         String contenidoMensaje = entrada.readUTF();
         
+        String emisorDB = existe ? loginHandler.getUsuarioAutenticado() : this.nombreHilo; 
+
         if (destinatarioEntrada.startsWith("@")) {
             String aQuien = destinatarioEntrada.trim().substring(1).split(" ")[0];
             UnCliente cliente = ServidorMulti.clientes.get(aQuien);
@@ -157,8 +166,18 @@ public class UnCliente implements Runnable {
             }
 
             try {
-                if (comandos.estaBloqueadoPor(this.nombreHilo, cliente.nombreHilo)) {
-                    this.salida.writeUTF("Fallo en el envío: " + cliente.nombreHilo + " te tiene bloqueado.");
+                boolean bloqueadoPorEmisor = comandos.estaBloqueadoPor(emisorDB, cliente.nombreHilo); 
+
+                boolean bloqueadoPorReceptor = comandos.estaBloqueadoPor(cliente.nombreHilo, emisorDB);
+
+                if (bloqueadoPorEmisor || bloqueadoPorReceptor) {
+                    String mensajeFallo;
+                    if (bloqueadoPorEmisor) {
+                        mensajeFallo = "Fallo en el envío: Tú has bloqueado a @" + cliente.nombreHilo + ".";
+                    } else {
+                        mensajeFallo = "Fallo en el envío: @" + cliente.nombreHilo + " te tiene bloqueado.";
+                    }
+                    this.salida.writeUTF(mensajeFallo);
                 } else {
                     cliente.salida.writeUTF("@" + this.nombreHilo + ": " + contenidoMensaje);
                 }
@@ -179,6 +198,8 @@ public class UnCliente implements Runnable {
         this.salida.writeUTF("Escribe tu mensaje");
         String contenidoMensaje = entrada.readUTF();
         
+        String emisorDB = existe ? loginHandler.getUsuarioAutenticado() : this.nombreHilo; 
+
         if (destinatariosEntrada.startsWith("@")) {
             String[] partes = destinatariosEntrada.split(",");
             boolean enviadoAlmenosUno = false;
@@ -187,13 +208,19 @@ public class UnCliente implements Runnable {
                 String aQuien = partes[i].substring(1).trim();
                 UnCliente cliente = ServidorMulti.clientes.get(aQuien);
 
-                try {
-                    if (cliente != null && !comandos.estaBloqueadoPor(this.nombreHilo, cliente.nombreHilo)) {
-                        cliente.salida.writeUTF("@" + this.nombreHilo + ": " + contenidoMensaje);
-                        enviadoAlmenosUno = true;
+                if (cliente != null) {
+                    try {
+                        boolean bloqueadoPorEmisor = comandos.estaBloqueadoPor(emisorDB, cliente.nombreHilo); 
+
+                        boolean bloqueadoPorReceptor = comandos.estaBloqueadoPor(cliente.nombreHilo, emisorDB);
+                        
+                        if (!bloqueadoPorEmisor && !bloqueadoPorReceptor) {
+                            cliente.salida.writeUTF("@" + this.nombreHilo + ": " + contenidoMensaje);
+                            enviadoAlmenosUno = true;
+                        }
+                    } catch (SQLException e) {
+                        System.err.println("Error DB al verificar bloqueo en envío a varios: " + e.getMessage());
                     }
-                } catch (SQLException e) {
-                    System.err.println("Error DB al verificar bloqueo en envío a varios: " + e.getMessage());
                 }
             }
             return enviadoAlmenosUno;
