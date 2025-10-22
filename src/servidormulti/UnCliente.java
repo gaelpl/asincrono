@@ -12,7 +12,7 @@ public class UnCliente implements Runnable {
     final DataOutputStream salida;
     final BufferedReader teclado = new BufferedReader(new InputStreamReader(System.in));
     final DataInputStream entrada;
-    String nombreHilo; 
+    public String nombreHilo; 
     private int intentos = 0;
     private final int intentosMaximos = 3;
     boolean existe = false;
