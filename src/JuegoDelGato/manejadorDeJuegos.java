@@ -2,11 +2,26 @@ package JuegoDelGato;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
+import java.util.Collections;
+import java.util.HashMap;
 
 public class manejadorDeJuegos {
+    
     private final Map<String, Juego> partidas = new ConcurrentHashMap<>();
+    private final Map<String, String> solicitudesPendientes = Collections.synchronizedMap(new HashMap<>());
 
-    // Inicia una nueva partida entre dos jugadores si no hay una activa entre ellos
+    public void registrarSolicitud(String idEmisor, String idDestino) {
+        solicitudesPendientes.put(idDestino, idEmisor);
+    }
+
+    public String getSolicitudPendiente(String idDestino) {
+        return solicitudesPendientes.get(idDestino);
+    }
+
+    public void removerSolicitud(String idDestino) {
+        solicitudesPendientes.remove(idDestino);
+    }
+
     public synchronized boolean iniciarPartida(Jugador jugador1, Jugador jugador2) {
         String key = generarKey(jugador1.getIdHilo(), jugador2.getIdHilo());
         if (partidas.containsKey(key)) {
@@ -17,7 +32,7 @@ public class manejadorDeJuegos {
         partidas.put(key, juego);
         return true;
     }
-
+    
     public Juego obtenerPartida(String idJugador1, String idJugador2) {
         return partidas.get(generarKey(idJugador1, idJugador2));
     }
