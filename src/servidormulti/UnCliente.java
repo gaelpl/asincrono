@@ -291,4 +291,26 @@ public class UnCliente implements Runnable {
         
         return false;
     }
+
+    private boolean manejarPropuesta(String idDestino) throws IOException {
+        UnCliente clienteDestino = ServidorMulti.clientes.get(idDestino);
+        
+        if (clienteDestino == null) {
+            salida.writeUTF("Error: El usuario @" + idDestino + " no está conectado.");
+            return true;
+        }
+        if (idDestino.equals(this.nombreHilo)) {
+            salida.writeUTF("Error: No puedes jugar contigo mismo.");
+            return true;
+        }
+        if (juegosManager.tienePartida(this.nombreHilo, idDestino) || juegosManager.getJuegoActivo(idDestino) != null) {
+             salida.writeUTF("Error: Ya tienes una partida con @" + idDestino + " o el está ocupado.");
+             return true;
+        }
+        
+        juegosManager.registrarSolicitud(this.nombreHilo, idDestino);
+        clienteDestino.salida.writeUTF("El usuario @" + this.nombreHilo + " te reto. Escribe 'aceptar @" + this.nombreHilo + "' para aceptar.");
+        salida.writeUTF("Reto enviado a @" + idDestino + ". Esperando respuesta...");
+        return true;
+    }
 }
