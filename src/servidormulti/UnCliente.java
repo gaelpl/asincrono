@@ -7,9 +7,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.sql.SQLException;
-
+import JuegoDelGato.manejadorDeJuegos;
 import JuegoDelGato.Juego;
 import JuegoDelGato.Jugador;
+import JuegoDelGato.Movimiento;
+
 
 public class UnCliente implements Runnable {
     final DataOutputStream salida;
@@ -23,6 +25,7 @@ public class UnCliente implements Runnable {
     private final comandosDAO comandos = new comandosDAO();
     private ManejadorComandos manejador;
     private final login loginHandler = new login();
+    private static manejadorDeJuegos juegosManager = new manejadorDeJuegos();
 
     UnCliente(Socket s, String nombreHilo) throws IOException {
         salida = new DataOutputStream(s.getOutputStream());
@@ -43,7 +46,7 @@ public class UnCliente implements Runnable {
                     exigirLoginRegister(loginHandler, registro);
                 }
 
-                Juego juegoActivo = GestorJuegos.getJuegoActivo(this.nombreHilo);
+                Juego juegoActivo = juegosManager.getJuegoActivo(this.nombreHilo);
                 
                 if (juegoActivo != null && juegoActivo.estaActivo()) {
                     manejarTurnoDeJuego(juegoActivo);
@@ -103,13 +106,13 @@ public class UnCliente implements Runnable {
             System.err.println("Error en el hilo de cliente: " + ex.getMessage());
         } finally { 
 
-            Juego juego = GestorJuegos.getJuegoActivo(this.nombreHilo);
+            Juego juego = juegosManager.getJuegoActivo(this.nombreHilo);
             if (juego != null && juego.estaActivo()) {
                 Jugador ganador = juego.forzarVictoria(this.nombreHilo);
                 if (ganador != null) {
                     ganador.getCliente().salida.writeUTF("Ganaste la partida contra @" + this.nombreHilo + " por rendición/desconexión.");
                 }
-                GestorJuegos.terminarJuego(juego);
+                juegosManager.terminarPartida(juego);
             }
 
             try {
@@ -252,5 +255,40 @@ public class UnCliente implements Runnable {
             this.salida.writeUTF("Formato incorrecto para mensaje a varios. Intenta usar @ID1,@ID2...");
             return false;
         }
+
+    }
+
+    private boolean manejarComandoJuego(String comandoCompleto, Juego juegoActivo) throws IOException {
+        String[] partes = comandoCompleto.trim().split(" ");
+        String accion = partes[0].toLowerCase();
+        
+        if (accion.equals("perder")) {
+            if (juegoActivo != null && juegoActivo.estaActivo()) {
+                Jugador ganador = juegoActivo.forzarVictoria(this.nombreHilo);
+                salida.writeUTF("Has abandonado la partida. Pierdes automáticamente.");
+                if (ganador != null) {
+                    ganador.getCliente().salida.writeUTF("Has ganado la partida contra @" + this.nombreHilo + " por rendición.");
+                }
+                juegosManager.terminarPartida(juegoActivo);
+                return true;
+            } else {
+                salida.writeUTF("Error: No estás en ninguna partida activa para rendirte.");
+                return true;
+            }
+        }
+        
+        String idDestino = partes.length > 1 && partes[1].startsWith("@") ? partes[1].substring(1) : null;
+        if (idDestino == null && (accion.equals("jugar") || accion.equals("aceptar"))) {
+             salida.writeUTF("Error: Debes especificar un usuario con @ID.");
+             return true;
+        }
+
+        if (accion.equals("jugar")) {
+            return manejarPropuesta(idDestino);
+        } else if (accion.equals("aceptar")) {
+            return manejarAceptar(idDestino);
+        }
+        
+        return false;
     }
 }
