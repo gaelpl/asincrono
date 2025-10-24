@@ -8,6 +8,9 @@ import java.io.InputStreamReader;
 import java.net.Socket;
 import java.sql.SQLException;
 
+import JuegoDelGato.Juego;
+import JuegoDelGato.Jugador;
+
 public class UnCliente implements Runnable {
     final DataOutputStream salida;
     final BufferedReader teclado = new BufferedReader(new InputStreamReader(System.in));
@@ -40,11 +43,22 @@ public class UnCliente implements Runnable {
                     exigirLoginRegister(loginHandler, registro);
                 }
 
+                Juego juegoActivo = GestorJuegos.getJuegoActivo(this.nombreHilo);
+                
+                if (juegoActivo != null && juegoActivo.estaActivo()) {
+                    manejarTurnoDeJuego(juegoActivo);
+                    continue; 
+                }
+
                 boolean puedeMandar = existe || (intentos < intentosMaximos);
 
                 if (puedeMandar) {
-                    this.salida.writeUTF("Elige la opcion 1:si quieres mandar mensaje general, 2:un usuario en especifico, 3:varios usuarios, o escribe 'bloquear @ID' o 'desbloquear @ID'"); 
+                    this.salida.writeUTF("Elige la opcion 1:si quieres mandar mensaje general, 2:un usuario en especifico, 3:varios usuarios, o escribe 'bloquear @ID' o 'desbloquear @ID', 'jugar @ID', 'aceptar @ID', 'perder'"); 
                     mensaje = entrada.readUTF();
+
+                    if (manejarComandoJuego(mensaje, juegoActivo)) {
+                        continue;
+                    }
 
                     try {
                         if (manejador.manejarComandoDeBloqueo(mensaje)) {
@@ -88,6 +102,16 @@ public class UnCliente implements Runnable {
         } catch (Exception ex) {
             System.err.println("Error en el hilo de cliente: " + ex.getMessage());
         } finally { 
+
+            Juego juego = GestorJuegos.getJuegoActivo(this.nombreHilo);
+            if (juego != null && juego.estaActivo()) {
+                Jugador ganador = juego.forzarVictoria(this.nombreHilo);
+                if (ganador != null) {
+                    ganador.getCliente().salida.writeUTF("Ganaste la partida contra @" + this.nombreHilo + " por rendición/desconexión.");
+                }
+                GestorJuegos.terminarJuego(juego);
+            }
+
             try {
                 if (entrada != null) entrada.close();
                 if (salida != null) salida.close();
