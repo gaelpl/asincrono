@@ -10,6 +10,32 @@ public class manejadorDeJuegos {
     private final Map<String, Juego> partidas = new ConcurrentHashMap<>();
     private final Map<String, String> solicitudesPendientes = Collections.synchronizedMap(new HashMap<>());
 
+    public Juego getJuegoActivo(String idCliente) {
+        for (Juego juego : partidas.values()) {
+            if (juego.getJugador1().getIdHilo().equals(idCliente) || juego.getJugador2().getIdHilo().equals(idCliente)) {
+                return juego;
+            }
+        }
+        return null;
+    }
+
+    public String getOponenteId(String idCliente) {
+        Juego juego = getJuegoActivo(idCliente);
+        if (juego == null) return null;
+        
+        if (juego.getJugador1().getIdHilo().equals(idCliente)) {
+            return juego.getJugador2().getIdHilo();
+        } else {
+            return juego.getJugador1().getIdHilo();
+        }
+    }
+    
+    public void terminarPartida(Juego juego) {
+         if (juego != null) {
+             partidas.remove(generarKey(juego.getJugador1().getIdHilo(), juego.getJugador2().getIdHilo()));
+         }
+    }
+
     public void registrarSolicitud(String idEmisor, String idDestino) {
         solicitudesPendientes.put(idDestino, idEmisor);
     }
