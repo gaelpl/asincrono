@@ -14,7 +14,7 @@ public class Registro {
 
     // metodo para manejar los registros de usuarios
     // cambiamos el buferreader por data inputstream
-    public void manejarRegistro(DataOutputStream salida, DataInputStream entrada) throws IOException {
+    public void manejarRegistro(DataOutputStream salida, DataInputStream entrada, String clienteIdHilo) throws IOException {
         salida.writeUTF("Elige un usuario:");
         String nuevoUsuario = entrada.readUTF();
 
@@ -25,7 +25,7 @@ public class Registro {
                 salida.writeUTF("Elige una contrasena:");
                 String nuevaContrasena = entrada.readUTF();
                 
-                boolean guardadoExitoso = comando.guardarNuevoUsuario(nuevoUsuario, nuevaContrasena);
+                boolean guardadoExitoso = comando.guardarNuevoUsuario(nuevoUsuario, nuevaContrasena, clienteIdHilo);
                 
                 if (guardadoExitoso) {
                     salida.writeUTF("Registro exitoso. Ahora puedes iniciar sesion.");
@@ -38,17 +38,4 @@ public class Registro {
             salida.writeUTF("Error interno del servidor al intentar registrar. Inténtalo de nuevo.");
         }
     }
-
-        // buscamos si el usuario existe
-       /*  if (ServidorMulti.usuarios.containsKey(nuevoUsuario)) {
-            salida.writeUTF("El usuario ya existe. Intenta iniciar sesion.");
-        } else {
-            salida.writeUTF("Elige una contrasena:");
-            String nuevaContrasena = entrada.readUTF();
-            ServidorMulti.usuarios.put(nuevoUsuario, nuevaContrasena);
-            // falta el metodo guardarUsuarios
-            guardarUsuarios();
-            salida.writeUTF("Registro exitoso. Ahora puedes iniciar sesion.");
-        }
-    }*/
 }

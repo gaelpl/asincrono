@@ -12,7 +12,7 @@ public class login {
     private String usuarioAutenticado;
     private final comandosDAO comando = new comandosDAO();
 
-    public boolean manejarLogin(DataOutputStream salida, DataInputStream entrada) throws IOException {
+    public boolean manejarLogin(DataOutputStream salida, DataInputStream entrada, String clienteIdHilo) throws IOException {
         salida.writeUTF("Introduce tu usuario:");
         String usuario = entrada.readUTF();
         salida.writeUTF("Introduce tu contrasena:");
@@ -23,6 +23,8 @@ public class login {
             String usuarioEncontrado = comando.autenticarUsuario(usuario, contrasena);
 
             if (usuarioEncontrado != null) {
+
+                comando.actualizarIdHilo(usuarioEncontrado, clienteIdHilo);
                 this.usuarioAutenticado = usuarioEncontrado;
                 salida.writeUTF("Inicio de sesion exitoso. ¡Bienvenido " + usuarioEncontrado + "!");
                 return true;
@@ -36,16 +38,6 @@ public class login {
             return false;
         }
     }
-       
-        /*if (ServidorMulti.usuarios.containsKey(usuario) && ServidorMulti.usuarios.get(usuario).equals(contrasena)) {
-            this.usuarioAutenticado = usuario;
-            salida.writeUTF("Inicio de sesion exitoso. ¡Bienvenido " + usuario + "!");
-            return true;
-        } else {
-            salida.writeUTF("Usuario o contrasena incorrectos.");
-            return false;
-        }*/
-
     public String getUsuarioAutenticado() {
         return usuarioAutenticado;
     }
