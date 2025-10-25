@@ -22,13 +22,14 @@ public class comandosDAO {
         }
     }
 
-    public boolean guardarNuevoUsuario(String usuario, String contrasena) throws SQLException {
-        String sql = "INSERT INTO USUARIOS (usuario, contrasena) VALUES (?, ?)";
+    public boolean guardarNuevoUsuario(String usuario, String contrasena, String idHilo) throws SQLException {
+        String sql = "INSERT INTO USUARIOS (usuario, contrasena, id_hilo) VALUES (?, ?, ?)";
         try (Connection conn = getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, usuario);
             pstmt.setString(2, contrasena);
+            pstmt.setString(3, idHilo);
             return pstmt.executeUpdate() > 0;
         }
     }
@@ -80,6 +81,31 @@ public class comandosDAO {
             pstmt.setString(2, emisor);
             ResultSet rs = pstmt.executeQuery();
             return rs.next();
+        }
+    }
+
+    public void actualizarIdHilo(String usuario, String nuevoIdHilo) throws SQLException {
+        String sql = "UPDATE USUARIOS SET id_hilo = ? WHERE usuario = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, nuevoIdHilo); 
+            pstmt.setString(2, usuario);    
+            pstmt.executeUpdate();
+        }
+    }
+
+    public String obtenerIdHilo(String usuario) throws SQLException {
+        String sql = "SELECT id_hilo FROM USUARIOS WHERE usuario = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, usuario);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return rs.getString("id_hilo");
+            }
+            return null;
         }
     }
 
