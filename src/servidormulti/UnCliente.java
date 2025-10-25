@@ -110,7 +110,12 @@ public class UnCliente implements Runnable {
             if (juego != null && juego.estaActivo()) {
                 Jugador ganador = juego.forzarVictoria(this.nombreHilo);
                 if (ganador != null) {
-                    ganador.getCliente().salida.writeUTF("Ganaste la partida contra @" + this.nombreHilo + " por rendición/desconexión.");
+                    try {
+                        ganador.getCliente().salida.writeUTF("Ganaste la partida contra @" + this.nombreHilo + " por rendición/desconexión.");
+                    } catch (IOException e) {
+                        System.err.println("Advertencia: El ganador (@" + ganador.getIdHilo()
+                                + ") se desconectó antes de recibir la notificación de victoria.");
+                    }
                 }
                 juegosManager.terminarPartida(juego);
             }
@@ -372,7 +377,7 @@ public class UnCliente implements Runnable {
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
-            } 
+            }
             return;
         }
 
