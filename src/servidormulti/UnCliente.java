@@ -313,4 +313,43 @@ public class UnCliente implements Runnable {
         salida.writeUTF("Reto enviado a @" + idDestino + ". Esperando respuesta...");
         return true;
     }
+
+    private boolean manejarAceptar(String idRetador) throws IOException {
+        String idEmisor = juegosManager.getSolicitudPendiente(this.nombreHilo);
+        
+        if (idEmisor == null || !idEmisor.equals(idRetador)) {
+            salida.writeUTF("Error: No tienes una solicitud de juego pendiente de @" + idRetador + ".");
+            return true;
+        }
+        
+        UnCliente clienteRetador = ServidorMulti.clientes.get(idRetador);
+        
+        Jugador yo = new Jugador(this, ' '); 
+        Jugador retador = new Jugador(clienteRetador, ' ');
+        
+        if (clienteRetador != null && juegosManager.iniciarPartida(retador, yo)) {
+            
+            Juego juego = juegosManager.obtenerPartida(this.nombreHilo, idRetador);
+            
+            Jugador yoConMarca = juego.getJugador(this.nombreHilo);
+            Jugador retadorConMarca = juego.getJugador(idRetador);
+            Jugador turno = juego.getTurnoActual();
+            
+            String msgInicio = "Partida iniciada con @" + idRetador + ". Eres la marca '" + yoConMarca.getMarca() + "'.";
+            String msgInicioRetador = "Partida iniciada con @" + this.nombreHilo + ". Eres la marca '" + retadorConMarca.getMarca() + "'.";
+            
+            salida.writeUTF(msgInicio);
+            clienteRetador.salida.writeUTF(msgInicioRetador);
+            
+            String turnoMsg = "Es el turno de @" + turno.getIdHilo() + " (" + turno.getMarca() + ")." + juego.obtenerEstadoTablero();
+            salida.writeUTF(turnoMsg);
+            clienteRetador.salida.writeUTF(turnoMsg);
+            
+            juegosManager.removerSolicitud(this.nombreHilo);
+            return true;
+        } else {
+             salida.writeUTF("Error al iniciar partida. El retador se desconectó o ya existe una partida.");
+             return true;
+        }
+    }
 }
