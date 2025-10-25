@@ -374,9 +374,10 @@ public class UnCliente implements Runnable {
         if (!juego.getTurnoActual().getIdHilo().equals(this.nombreHilo)) {
             salida.writeUTF("Esperando movimiento de @" + juego.getTurnoActual().getIdHilo() + " ("
                     + juego.getTurnoActual().getMarca() + ")... Tablero:" + juego.obtenerEstadoTablero());
-            try {
-                Thread.sleep(500);
+           try {
+                Thread.sleep(5000);
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt(); 
             }
             return;
         }
