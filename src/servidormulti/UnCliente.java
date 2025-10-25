@@ -12,16 +12,15 @@ import JuegoDelGato.Juego;
 import JuegoDelGato.Jugador;
 import JuegoDelGato.Movimiento;
 
-
 public class UnCliente implements Runnable {
     final DataOutputStream salida;
     final BufferedReader teclado = new BufferedReader(new InputStreamReader(System.in));
     final DataInputStream entrada;
-    public String nombreHilo; 
+    public String nombreHilo;
     private int intentos = 0;
     private final int intentosMaximos = 3;
     boolean existe = false;
-    
+
     private final comandosDAO comandos = new comandosDAO();
     private ManejadorComandos manejador;
     private final login loginHandler = new login();
@@ -31,14 +30,14 @@ public class UnCliente implements Runnable {
         salida = new DataOutputStream(s.getOutputStream());
         entrada = new DataInputStream(s.getInputStream());
         this.nombreHilo = nombreHilo;
-        this.manejador = new ManejadorComandos(comandos, nombreHilo, salida); 
+        this.manejador = new ManejadorComandos(comandos, nombreHilo, salida);
     }
 
     @Override
     public void run() {
         String mensaje = "";
         Registro registro = new Registro();
-        
+
         try {
             while (true) {
                 if (!existe && intentos >= intentosMaximos) {
@@ -47,16 +46,17 @@ public class UnCliente implements Runnable {
                 }
 
                 Juego juegoActivo = juegosManager.getJuegoActivo(this.nombreHilo);
-                
+
                 if (juegoActivo != null && juegoActivo.estaActivo()) {
                     manejarTurnoDeJuego(juegoActivo);
-                    continue; 
+                    continue;
                 }
 
                 boolean puedeMandar = existe || (intentos < intentosMaximos);
 
                 if (puedeMandar) {
-                    this.salida.writeUTF("Elige la opcion 1:si quieres mandar mensaje general, 2:un usuario en especifico, 3:varios usuarios, o escribe 'bloquear @ID' o 'desbloquear @ID', 'jugar @ID', 'aceptar @ID', 'perder'"); 
+                    this.salida.writeUTF(
+                            "Elige la opcion 1:si quieres mandar mensaje general, 2:un usuario en especifico, 3:varios usuarios, o escribe 'bloquear @ID' o 'desbloquear @ID', 'jugar @ID', 'aceptar @ID', 'perder'");
                     mensaje = entrada.readUTF();
 
                     if (manejarComandoJuego(mensaje, juegoActivo)) {
@@ -65,7 +65,7 @@ public class UnCliente implements Runnable {
 
                     try {
                         if (manejador.manejarComandoDeBloqueo(mensaje)) {
-                            continue; 
+                            continue;
                         }
                     } catch (SQLException e) {
                         salida.writeUTF("Error interno: Fallo en la base de datos al procesar comando.");
@@ -76,7 +76,7 @@ public class UnCliente implements Runnable {
                     this.salida.writeUTF("Solo puedes recibir mensajes. Por favor, autentícate para enviar.");
                     continue;
                 }
-                
+
                 boolean mensajeValido = false;
                 switch (mensaje) {
                     case "1":
@@ -104,7 +104,7 @@ public class UnCliente implements Runnable {
             }
         } catch (Exception ex) {
             System.err.println("Error en el hilo de cliente: " + ex.getMessage());
-        } finally { 
+        } finally {
 
             Juego juego = juegosManager.getJuegoActivo(this.nombreHilo);
             if (juego != null && juego.estaActivo()) {
@@ -116,9 +116,12 @@ public class UnCliente implements Runnable {
             }
 
             try {
-                if (entrada != null) entrada.close();
-                if (salida != null) salida.close();
-            } catch (IOException e) { /* Ignorar */ }
+                if (entrada != null)
+                    entrada.close();
+                if (salida != null)
+                    salida.close();
+            } catch (IOException e) {
+                /* Ignorar */ }
             ServidorMulti.clientes.remove(this.nombreHilo);
         }
     }
@@ -150,23 +153,23 @@ public class UnCliente implements Runnable {
     private boolean enviarMensajeGeneral() throws IOException {
         this.salida.writeUTF("Escribe tu mensaje para todos");
         String mensaje = entrada.readUTF();
-        
-        String emisorDB = existe ? loginHandler.getUsuarioAutenticado() : this.nombreHilo; 
+
+        String emisorDB = existe ? loginHandler.getUsuarioAutenticado() : this.nombreHilo;
 
         for (UnCliente cliente : ServidorMulti.clientes.values()) {
             if (cliente.nombreHilo.equals(this.nombreHilo)) {
-                continue; 
+                continue;
             }
-            
+
             try {
-                boolean bloqueadoPorEmisor = comandos.estaBloqueadoPor(emisorDB, cliente.nombreHilo); 
+                boolean bloqueadoPorEmisor = comandos.estaBloqueadoPor(emisorDB, cliente.nombreHilo);
 
                 boolean bloqueadoPorReceptor = comandos.estaBloqueadoPor(cliente.nombreHilo, emisorDB);
-                
+
                 if (bloqueadoPorEmisor || bloqueadoPorReceptor) {
-                    continue; 
+                    continue;
                 }
-                
+
                 cliente.salida.writeUTF("@" + this.nombreHilo + ": " + mensaje);
             } catch (SQLException e) {
                 System.err.println("Error DB al verificar bloqueo para " + cliente.nombreHilo + ": " + e.getMessage());
@@ -180,20 +183,20 @@ public class UnCliente implements Runnable {
         String destinatarioEntrada = entrada.readUTF();
         this.salida.writeUTF("Escribe tu mensaje");
         String contenidoMensaje = entrada.readUTF();
-        
-        String emisorDB = existe ? loginHandler.getUsuarioAutenticado() : this.nombreHilo; 
+
+        String emisorDB = existe ? loginHandler.getUsuarioAutenticado() : this.nombreHilo;
 
         if (destinatarioEntrada.startsWith("@")) {
             String aQuien = destinatarioEntrada.trim().substring(1).split(" ")[0];
             UnCliente cliente = ServidorMulti.clientes.get(aQuien);
-            
+
             if (cliente == null) {
                 this.salida.writeUTF("Error: Usuario @" + aQuien + " no encontrado o desconectado.");
                 return false;
             }
 
             try {
-                boolean bloqueadoPorEmisor = comandos.estaBloqueadoPor(emisorDB, cliente.nombreHilo); 
+                boolean bloqueadoPorEmisor = comandos.estaBloqueadoPor(emisorDB, cliente.nombreHilo);
 
                 boolean bloqueadoPorReceptor = comandos.estaBloqueadoPor(cliente.nombreHilo, emisorDB);
 
@@ -220,27 +223,28 @@ public class UnCliente implements Runnable {
     }
 
     private boolean enviarMensajeVarios() throws IOException {
-        this.salida.writeUTF("Escribe a quienes quieres mandar mensaje, pon @numeroDeUsuario separados por comas al inicio");
+        this.salida.writeUTF(
+                "Escribe a quienes quieres mandar mensaje, pon @numeroDeUsuario separados por comas al inicio");
         String destinatariosEntrada = entrada.readUTF();
         this.salida.writeUTF("Escribe tu mensaje");
         String contenidoMensaje = entrada.readUTF();
-        
-        String emisorDB = existe ? loginHandler.getUsuarioAutenticado() : this.nombreHilo; 
+
+        String emisorDB = existe ? loginHandler.getUsuarioAutenticado() : this.nombreHilo;
 
         if (destinatariosEntrada.startsWith("@")) {
             String[] partes = destinatariosEntrada.split(",");
             boolean enviadoAlmenosUno = false;
-            
+
             for (int i = 0; i < partes.length; i++) {
                 String aQuien = partes[i].substring(1).trim();
                 UnCliente cliente = ServidorMulti.clientes.get(aQuien);
 
                 if (cliente != null) {
                     try {
-                        boolean bloqueadoPorEmisor = comandos.estaBloqueadoPor(emisorDB, cliente.nombreHilo); 
+                        boolean bloqueadoPorEmisor = comandos.estaBloqueadoPor(emisorDB, cliente.nombreHilo);
 
                         boolean bloqueadoPorReceptor = comandos.estaBloqueadoPor(cliente.nombreHilo, emisorDB);
-                        
+
                         if (!bloqueadoPorEmisor && !bloqueadoPorReceptor) {
                             cliente.salida.writeUTF("@" + this.nombreHilo + ": " + contenidoMensaje);
                             enviadoAlmenosUno = true;
@@ -261,13 +265,14 @@ public class UnCliente implements Runnable {
     private boolean manejarComandoJuego(String comandoCompleto, Juego juegoActivo) throws IOException {
         String[] partes = comandoCompleto.trim().split(" ");
         String accion = partes[0].toLowerCase();
-        
+
         if (accion.equals("perder")) {
             if (juegoActivo != null && juegoActivo.estaActivo()) {
                 Jugador ganador = juegoActivo.forzarVictoria(this.nombreHilo);
                 salida.writeUTF("Has abandonado la partida. Pierdes automáticamente.");
                 if (ganador != null) {
-                    ganador.getCliente().salida.writeUTF("Has ganado la partida contra @" + this.nombreHilo + " por rendición.");
+                    ganador.getCliente().salida
+                            .writeUTF("Has ganado la partida contra @" + this.nombreHilo + " por rendición.");
                 }
                 juegosManager.terminarPartida(juegoActivo);
                 return true;
@@ -276,11 +281,11 @@ public class UnCliente implements Runnable {
                 return true;
             }
         }
-        
+
         String idDestino = partes.length > 1 && partes[1].startsWith("@") ? partes[1].substring(1) : null;
         if (idDestino == null && (accion.equals("jugar") || accion.equals("aceptar"))) {
-             salida.writeUTF("Error: Debes especificar un usuario con @ID.");
-             return true;
+            salida.writeUTF("Error: Debes especificar un usuario con @ID.");
+            return true;
         }
 
         if (accion.equals("jugar")) {
@@ -288,13 +293,13 @@ public class UnCliente implements Runnable {
         } else if (accion.equals("aceptar")) {
             return manejarAceptar(idDestino);
         }
-        
+
         return false;
     }
 
     private boolean manejarPropuesta(String idDestino) throws IOException {
         UnCliente clienteDestino = ServidorMulti.clientes.get(idDestino);
-        
+
         if (clienteDestino == null) {
             salida.writeUTF("Error: El usuario @" + idDestino + " no está conectado.");
             return true;
@@ -304,52 +309,123 @@ public class UnCliente implements Runnable {
             return true;
         }
         if (juegosManager.tienePartida(this.nombreHilo, idDestino) || juegosManager.getJuegoActivo(idDestino) != null) {
-             salida.writeUTF("Error: Ya tienes una partida con @" + idDestino + " o el está ocupado.");
-             return true;
+            salida.writeUTF("Error: Ya tienes una partida con @" + idDestino + " o el está ocupado.");
+            return true;
         }
-        
+
         juegosManager.registrarSolicitud(this.nombreHilo, idDestino);
-        clienteDestino.salida.writeUTF("El usuario @" + this.nombreHilo + " te reto. Escribe 'aceptar @" + this.nombreHilo + "' para aceptar.");
+        clienteDestino.salida.writeUTF("El usuario @" + this.nombreHilo + " te reto. Escribe 'aceptar @"
+                + this.nombreHilo + "' para aceptar.");
         salida.writeUTF("Reto enviado a @" + idDestino + ". Esperando respuesta...");
         return true;
     }
 
     private boolean manejarAceptar(String idRetador) throws IOException {
         String idEmisor = juegosManager.getSolicitudPendiente(this.nombreHilo);
-        
+
         if (idEmisor == null || !idEmisor.equals(idRetador)) {
             salida.writeUTF("Error: No tienes una solicitud de juego pendiente de @" + idRetador + ".");
             return true;
         }
-        
+
         UnCliente clienteRetador = ServidorMulti.clientes.get(idRetador);
-        
-        Jugador yo = new Jugador(this, ' '); 
+
+        Jugador yo = new Jugador(this, ' ');
         Jugador retador = new Jugador(clienteRetador, ' ');
-        
+
         if (clienteRetador != null && juegosManager.iniciarPartida(retador, yo)) {
-            
+
             Juego juego = juegosManager.obtenerPartida(this.nombreHilo, idRetador);
-            
+
             Jugador yoConMarca = juego.getJugador(this.nombreHilo);
             Jugador retadorConMarca = juego.getJugador(idRetador);
             Jugador turno = juego.getTurnoActual();
-            
-            String msgInicio = "Partida iniciada con @" + idRetador + ". Eres la marca '" + yoConMarca.getMarca() + "'.";
-            String msgInicioRetador = "Partida iniciada con @" + this.nombreHilo + ". Eres la marca '" + retadorConMarca.getMarca() + "'.";
-            
+
+            String msgInicio = "Partida iniciada con @" + idRetador + ". Eres la marca '" + yoConMarca.getMarca()
+                    + "'.";
+            String msgInicioRetador = "Partida iniciada con @" + this.nombreHilo + ". Eres la marca '"
+                    + retadorConMarca.getMarca() + "'.";
+
             salida.writeUTF(msgInicio);
             clienteRetador.salida.writeUTF(msgInicioRetador);
-            
-            String turnoMsg = "Es el turno de @" + turno.getIdHilo() + " (" + turno.getMarca() + ")." + juego.obtenerEstadoTablero();
+
+            String turnoMsg = "Es el turno de @" + turno.getIdHilo() + " (" + turno.getMarca() + ")."
+                    + juego.obtenerEstadoTablero();
             salida.writeUTF(turnoMsg);
             clienteRetador.salida.writeUTF(turnoMsg);
-            
+
             juegosManager.removerSolicitud(this.nombreHilo);
             return true;
         } else {
-             salida.writeUTF("Error al iniciar partida. El retador se desconectó o ya existe una partida.");
-             return true;
+            salida.writeUTF("Error al iniciar partida. El retador se desconectó o ya existe una partida.");
+            return true;
         }
     }
+
+    private void manejarTurnoDeJuego(Juego juego) throws IOException {
+        Jugador jugadorActual = juego.getJugador(this.nombreHilo);
+        Jugador oponente = juego.getContrincante(jugadorActual);
+
+        if (!juego.getTurnoActual().getIdHilo().equals(this.nombreHilo)) {
+            salida.writeUTF("Esperando movimiento de @" + juego.getTurnoActual().getIdHilo() + " ("
+                    + juego.getTurnoActual().getMarca() + ")... Tablero:" + juego.obtenerEstadoTablero());
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+            } 
+            return;
+        }
+
+        salida.writeUTF("¡Es tu turno, " + jugadorActual.getMarca()
+                + "! Ingresa tu movimiento (fila, columna - ej: 1,2):" + juego.obtenerEstadoTablero());
+
+        String input = entrada.readUTF();
+
+        if (input.equalsIgnoreCase("perder")) {
+            manejarComandoJuego("perder", juego);
+            return;
+        }
+
+        try {
+            String[] coords = input.trim().split(",");
+            if (coords.length != 2)
+                throw new IllegalArgumentException("Formato incorrecto. Deben ser dos números separados por coma.");
+
+            int fila = Integer.parseInt(coords[0].trim());
+            int columna = Integer.parseInt(coords[1].trim());
+
+            String resultado = juego.procesarMovimiento(jugadorActual, new Movimiento(fila, columna));
+
+            if (resultado.equals("VALIDO")) {
+                String msgTablero = juego.obtenerEstadoTablero();
+                String msgTurno = "Turno de @" + juego.getTurnoActual().getIdHilo() + " ("
+                        + juego.getTurnoActual().getMarca() + ")";
+
+                salida.writeUTF("Movimiento exitoso. " + msgTurno + msgTablero);
+                oponente.getCliente().salida.writeUTF("Movimiento de @" + jugadorActual.getIdHilo() + " ("
+                        + jugadorActual.getMarca() + "): " + msgTurno + msgTablero);
+
+            } else if (resultado.equals("VICTORIA") || resultado.equals("EMPATE")) {
+                String resultadoFinal = resultado.equals("VICTORIA") ? "¡VICTORIA! Has ganado la partida."
+                        : "¡EMPATE! El tablero está lleno.";
+                String msgTablero = juego.obtenerEstadoTablero();
+
+                salida.writeUTF(resultadoFinal + msgTablero);
+                oponente.getCliente().salida.writeUTF(
+                        juego.getGanador() != null ? "DERROTA. @" + jugadorActual.getIdHilo() + " ganó." + msgTablero
+                                : "EMPATE." + msgTablero);
+
+                juegosManager.terminarPartida(juego);
+
+            } else {
+                salida.writeUTF("Error de juego: " + resultado.replace("ERROR_", ""));
+            }
+
+        } catch (NumberFormatException ex) {
+            salida.writeUTF("Error: Las coordenadas deben ser números enteros.");
+        } catch (IllegalArgumentException ex) {
+            salida.writeUTF("Error: Coordenadas inválidas. Usa formato 'fila,columna' (ej: 1,2).");
+        }
+    }
+
 }
