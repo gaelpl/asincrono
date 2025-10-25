@@ -28,6 +28,7 @@ public Connection conectar() throws SQLException {
         String sqlUsuarios = "CREATE TABLE IF NOT EXISTS USUARIOS ("
                 + "usuario TEXT PRIMARY KEY NOT NULL,"
                 + "contrasena TEXT NOT NULL"
+                + "id_hilo TEXT"
                 + ");";
 
         String sqlBloqueos = "CREATE TABLE IF NOT EXISTS BLOQUEOS ("
