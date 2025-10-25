@@ -140,12 +140,12 @@ public class UnCliente implements Runnable {
                 break;
             }
             if ("login".equalsIgnoreCase(accion)) {
-                existe = login.manejarLogin(salida, entrada);
+                existe = login.manejarLogin(salida, entrada, this.nombreHilo);
                 if (existe) {
                     manejador.setUsuarioAutenticado(loginHandler.getUsuarioAutenticado());
                 }
             } else if ("register".equalsIgnoreCase(accion)) {
-                registro.manejarRegistro(salida, entrada);
+                registro.manejarRegistro(salida, entrada, this.nombreHilo);
             } else {
                 salida.writeUTF("Accion no reconocida. Intenta de nuevo.");
             }
