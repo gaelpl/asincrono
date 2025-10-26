@@ -27,7 +27,7 @@ public Connection conectar() throws SQLException {
     private void crearTablas() {
         String sqlUsuarios = "CREATE TABLE IF NOT EXISTS USUARIOS ("
                 + "usuario TEXT PRIMARY KEY NOT NULL,"
-                + "contrasena TEXT NOT NULL"
+                + "contrasena TEXT NOT NULL,"
                 + "id_hilo TEXT"
                 + ");";
 
