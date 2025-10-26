@@ -109,4 +109,19 @@ public class comandosDAO {
         }
     }
 
+    public String obtenerUsuarioPorIdHilo(String idHilo) throws SQLException {
+    String sql = "SELECT usuario FROM USUARIOS WHERE id_hilo = ?";
+    try (Connection conn = getConnection();
+         PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        
+        pstmt.setString(1, idHilo); 
+        ResultSet rs = pstmt.executeQuery();
+        
+        if (rs.next()) {
+            return rs.getString("usuario"); 
+        }
+        return idHilo;
+    }
+}
+
 }

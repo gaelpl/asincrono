@@ -304,8 +304,12 @@ public class UnCliente implements Runnable {
                 Jugador ganador = juegoActivo.forzarVictoria(this.nombreHilo);
                 salida.writeUTF("Has abandonado la partida. Pierdes automáticamente.");
                 if (ganador != null) {
-                    ganador.getCliente().salida
-                            .writeUTF("Has ganado la partida contra @" + this.nombreHilo + " por rendición.");
+                    try {
+                        ganador.getCliente().salida
+                                .writeUTF("Has ganado la partida contra @" + this.nombreHilo + " por rendición.");
+                    } catch (IOException e) {
+                        System.err.println("Advertencia: No se pudo notificar al ganador por error de red.");
+                    }
                 }
                 juegosManager.terminarPartida(juegoActivo);
                 return true;
@@ -315,82 +319,99 @@ public class UnCliente implements Runnable {
             }
         }
 
-        String idDestino = partes.length > 1 && partes[1].startsWith("@") ? partes[1].substring(1) : null;
-        if (idDestino == null && (accion.equals("jugar") || accion.equals("aceptar"))) {
-            salida.writeUTF("Error: Debes especificar un usuario con @ID.");
+        String nombreDestino = partes.length > 1 && partes[1].startsWith("@") ? partes[1].substring(1) : null;
+
+        if (!accion.equals("jugar") && !accion.equals("aceptar")) {
+            return false;
+        }
+        if (nombreDestino == null) {
+            salida.writeUTF("Error: Debes especificar un usuario con @NombreDeUsuario.");
             return true;
         }
 
-        if (accion.equals("jugar")) {
-            return manejarPropuesta(idDestino);
-        } else if (accion.equals("aceptar")) {
-            return manejarAceptar(idDestino);
-        }
+        String idHiloDestino;
+        try {
+            idHiloDestino = comandos.obtenerIdHilo(nombreDestino);
 
+            if (idHiloDestino == null) {
+                salida.writeUTF("Error: El usuario @" + nombreDestino + " no está registrado en el sistema.");
+                return true;
+            }
+            if (!ServidorMulti.clientes.containsKey(idHiloDestino)) {
+                salida.writeUTF("Error: El usuario @" + nombreDestino + " está registrado pero no conectado.");
+                return true;
+            }
+        } catch (SQLException e) {
+            salida.writeUTF("Error interno al buscar el ID de usuario en la base de datos.");
+            System.err.println("Error SQL al traducir nombre: " + e.getMessage());
+            return true;
+        }
+        if (accion.equals("jugar")) {
+            return manejarPropuesta(idHiloDestino, nombreDestino);
+        } else if (accion.equals("aceptar")) {
+            return manejarAceptar(idHiloDestino, nombreDestino);
+        }
         return false;
     }
 
-    private boolean manejarPropuesta(String idDestino) throws IOException {
-        UnCliente clienteDestino = ServidorMulti.clientes.get(idDestino);
+    private boolean manejarPropuesta(String idHiloDestino, String nombreDestino) throws IOException {
+        String miIdHilo = this.nombreHilo;
+        String miNombre = loginHandler.getUsuarioAutenticado();
+        UnCliente clienteDestino = ServidorMulti.clientes.get(idHiloDestino);
 
-        if (clienteDestino == null) {
-            salida.writeUTF("Error: El usuario @" + idDestino + " no está conectado.");
+        if (idHiloDestino.equals(this.nombreHilo)) {
+            this.salida.writeUTF("Error: No puedes jugar contigo mismo.");
             return true;
         }
-        if (idDestino.equals(this.nombreHilo)) {
-            salida.writeUTF("Error: No puedes jugar contigo mismo.");
+        if (juegosManager.tienePartida(miIdHilo, idHiloDestino)|| juegosManager.getJuegoActivo(idHiloDestino) != null) {
+            this.salida.writeUTF("Error: Ya tienes una partida con @" + nombreDestino + " o él está ocupado.");
             return true;
         }
-        if (juegosManager.tienePartida(this.nombreHilo, idDestino) || juegosManager.getJuegoActivo(idDestino) != null) {
-            salida.writeUTF("Error: Ya tienes una partida con @" + idDestino + " o el está ocupado.");
-            return true;
-        }
+        juegosManager.registrarSolicitud(miIdHilo, idHiloDestino);
+        clienteDestino.salida.writeUTF("El usuario @" + miNombre + " te reta. Escribe 'aceptar @"
+                + miNombre + "' para aceptar.");
+        this.salida.writeUTF("Reto enviado a @" + nombreDestino + ". Esperando respuesta...");
 
-        juegosManager.registrarSolicitud(this.nombreHilo, idDestino);
-        clienteDestino.salida.writeUTF("El usuario @" + this.nombreHilo + " te reto. Escribe 'aceptar @"
-                + this.nombreHilo + "' para aceptar.");
-        salida.writeUTF("Reto enviado a @" + idDestino + ". Esperando respuesta...");
         return true;
     }
 
-    private boolean manejarAceptar(String idRetador) throws IOException {
-        String idEmisor = juegosManager.getSolicitudPendiente(this.nombreHilo);
+    private boolean manejarAceptar(String idHiloRetador, String nombreRetador) throws IOException {
+        String miIdHilo = this.nombreHilo;
+        String miNombre = loginHandler.getUsuarioAutenticado();
+        String idEmisor = juegosManager.getSolicitudPendiente(miIdHilo);
 
-        if (idEmisor == null || !idEmisor.equals(idRetador)) {
-            salida.writeUTF("Error: No tienes una solicitud de juego pendiente de @" + idRetador + ".");
+        if (idEmisor == null || !idEmisor.equals(idHiloRetador)) {
+            this.salida.writeUTF("Error: No tienes una solicitud de juego pendiente de @" + nombreRetador + ".");
             return true;
         }
 
-        UnCliente clienteRetador = ServidorMulti.clientes.get(idRetador);
-
+        UnCliente clienteRetador = ServidorMulti.clientes.get(idHiloRetador);
         Jugador yo = new Jugador(this, ' ');
         Jugador retador = new Jugador(clienteRetador, ' ');
 
         if (clienteRetador != null && juegosManager.iniciarPartida(retador, yo)) {
 
-            Juego juego = juegosManager.obtenerPartida(this.nombreHilo, idRetador);
-
-            Jugador yoConMarca = juego.getJugador(this.nombreHilo);
-            Jugador retadorConMarca = juego.getJugador(idRetador);
+            Juego juego = juegosManager.obtenerPartida(miIdHilo, idHiloRetador);
+            Jugador yoConMarca = juego.getJugador(miIdHilo);
+            Jugador retadorConMarca = juego.getJugador(idHiloRetador);
             Jugador turno = juego.getTurnoActual();
+            String nombreRetadorReal = nombreRetador;
+            String nombreTurno = turno.getIdHilo().equals(miIdHilo) ? miNombre : nombreRetadorReal;
 
-            String msgInicio = "Partida iniciada con @" + idRetador + ". Eres la marca '" + yoConMarca.getMarca()
-                    + "'.";
-            String msgInicioRetador = "Partida iniciada con @" + this.nombreHilo + ". Eres la marca '"
-                    + retadorConMarca.getMarca() + "'.";
+            String msgInicio = "Partida iniciada con @" + nombreRetadorReal + ". Eres la marca '"+ yoConMarca.getMarca()+ "'.";
+            String msgInicioRetador = "Partida iniciada con @" + miNombre + ". Eres la marca '"+ retadorConMarca.getMarca() + "'.";
 
-            salida.writeUTF(msgInicio);
+            this.salida.writeUTF(msgInicio);
             clienteRetador.salida.writeUTF(msgInicioRetador);
 
-            String turnoMsg = "Es el turno de @" + turno.getIdHilo() + " (" + turno.getMarca() + ")."
-                    + juego.obtenerEstadoTablero();
-            salida.writeUTF(turnoMsg);
+            String turnoMsg = "Es el turno de @" + nombreTurno + " (" + turno.getMarca() + ")."+ juego.obtenerEstadoTablero();
+            this.salida.writeUTF(turnoMsg);
             clienteRetador.salida.writeUTF(turnoMsg);
 
-            juegosManager.removerSolicitud(this.nombreHilo);
+            juegosManager.removerSolicitud(miIdHilo);
             return true;
         } else {
-            salida.writeUTF("Error al iniciar partida. El retador se desconectó o ya existe una partida.");
+            this.salida.writeUTF("Error al iniciar partida. El retador se desconectó o ya existe una partida.");
             return true;
         }
     }
@@ -400,8 +421,7 @@ public class UnCliente implements Runnable {
         Jugador oponente = juego.getContrincante(jugadorActual);
 
         if (!juego.getTurnoActual().getIdHilo().equals(this.nombreHilo)) {
-            salida.writeUTF("Esperando movimiento de @" + juego.getTurnoActual().getIdHilo() + " ("
-                    + juego.getTurnoActual().getMarca() + ")... Tablero:" + juego.obtenerEstadoTablero());
+            salida.writeUTF("Esperando movimiento de @" + juego.getTurnoActual().getIdHilo() + " ("+ juego.getTurnoActual().getMarca() + ")... Tablero:" + juego.obtenerEstadoTablero());
             try {
                 Thread.sleep(5000);
             } catch (InterruptedException e) {
@@ -410,9 +430,7 @@ public class UnCliente implements Runnable {
             return;
         }
 
-        salida.writeUTF("¡Es tu turno, " + jugadorActual.getMarca()
-                + "! Ingresa tu movimiento (fila, columna - ej: 1,2):" + juego.obtenerEstadoTablero());
-
+        salida.writeUTF("¡Es tu turno, " + jugadorActual.getMarca()+ "! Ingresa tu movimiento (fila, columna - ej: 1,2):" + juego.obtenerEstadoTablero());
         String input = entrada.readUTF();
 
         if (input.equalsIgnoreCase("perder")) {
@@ -427,17 +445,14 @@ public class UnCliente implements Runnable {
 
             int fila = Integer.parseInt(coords[0].trim());
             int columna = Integer.parseInt(coords[1].trim());
-
             String resultado = juego.procesarMovimiento(jugadorActual, new Movimiento(fila, columna));
 
             if (resultado.equals("VALIDO")) {
                 String msgTablero = juego.obtenerEstadoTablero();
-                String msgTurno = "Turno de @" + juego.getTurnoActual().getIdHilo() + " ("
-                        + juego.getTurnoActual().getMarca() + ")";
+                String msgTurno = "Turno de @" + juego.getTurnoActual().getIdHilo() + " ("+ juego.getTurnoActual().getMarca() + ")";
 
                 salida.writeUTF("Movimiento exitoso. " + msgTurno + msgTablero);
-                oponente.getCliente().salida.writeUTF("Movimiento de @" + jugadorActual.getIdHilo() + " ("
-                        + jugadorActual.getMarca() + "): " + msgTurno + msgTablero);
+                oponente.getCliente().salida.writeUTF("Movimiento de @" + jugadorActual.getIdHilo() + " ("+ jugadorActual.getMarca() + "): " + msgTurno + msgTablero);
 
             } else if (resultado.equals("VICTORIA") || resultado.equals("EMPATE")) {
                 String resultadoFinal = resultado.equals("VICTORIA") ? "¡VICTORIA! Has ganado la partida."
