@@ -1,6 +1,7 @@
 package servidormulti;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 public class RankingDAO {
@@ -30,6 +31,20 @@ public class RankingDAO {
                 break;
             default:
                 return;
+        }
+
+        String sql = "INSERT INTO RANKING (usuario, puntos, " + campo + ") VALUES (?, ?, 1) "
+                   + "ON CONFLICT(usuario) DO UPDATE SET "
+                   + "puntos = puntos + ?,"
+                   + campo + " = " + campo + " + 1;";
+
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, usuario);
+            pstmt.setInt(2, puntos);
+            pstmt.setInt(3, puntos); 
+            pstmt.executeUpdate();
         }
     }
 }
