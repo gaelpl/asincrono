@@ -269,66 +269,83 @@ public class UnCliente implements Runnable {
     }
 
     private void manejarTurnoDeJuego(Juego juego) throws IOException {
-        Jugador jugadorActual = juego.getJugador(this.nombreHilo);
-        Jugador oponente = juego.getContrincante(jugadorActual);
-
-        if (!juego.getTurnoActual().getIdHilo().equals(this.nombreHilo)) {
-            salida.writeUTF("Esperando movimiento de @" + juego.getTurnoActual().getIdHilo() + " ("+ juego.getTurnoActual().getMarca() + ")... Tablero:" + juego.obtenerEstadoTablero());
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            return;
-        }
-
-        salida.writeUTF("¡Es tu turno, " + jugadorActual.getMarca()+ "! Ingresa tu movimiento (fila, columna - ej: 1,2):" + juego.obtenerEstadoTablero());
-        String input = entrada.readUTF();
-
-        if (input.equalsIgnoreCase("perder")) {
-            manejarComandoJuego("perder", juego);
-            return;
-        }
-
+    Jugador jugadorActual = juego.getJugador(this.nombreHilo);
+    Jugador oponente = juego.getContrincante(jugadorActual);    
+    RankingDAO rankingDAO = new RankingDAO(); 
+    
+    if (!juego.getTurnoActual().getIdHilo().equals(this.nombreHilo)) {
+        salida.writeUTF("Esperando movimiento de @" + juego.getTurnoActual().getIdHilo() + " ("
+                + juego.getTurnoActual().getMarca() + ")... Tablero:" + juego.obtenerEstadoTablero());
         try {
-            String[] coords = input.trim().split(",");
-            if (coords.length != 2)
-                throw new IllegalArgumentException("Formato incorrecto. Deben ser dos números separados por coma.");
-
-            int fila = Integer.parseInt(coords[0].trim());
-            int columna = Integer.parseInt(coords[1].trim());
-            String resultado = juego.procesarMovimiento(jugadorActual, new Movimiento(fila, columna));
-
-            if (resultado.equals("VALIDO")) {
-                String msgTablero = juego.obtenerEstadoTablero();
-                String msgTurno = "Turno de @" + juego.getTurnoActual().getIdHilo() + " ("+ juego.getTurnoActual().getMarca() + ")";
-
-                salida.writeUTF("Movimiento exitoso. " + msgTurno + msgTablero);
-                oponente.getCliente().salida.writeUTF("Movimiento de @" + jugadorActual.getIdHilo() + " ("+ jugadorActual.getMarca() + "): " + msgTurno + msgTablero);
-
-            } else if (resultado.equals("VICTORIA") || resultado.equals("EMPATE")) {
-                String resultadoFinal = resultado.equals("VICTORIA") ? "¡VICTORIA! Has ganado la partida."
-                        : "¡EMPATE! El tablero está lleno.";
-                String msgTablero = juego.obtenerEstadoTablero();
-
-                salida.writeUTF(resultadoFinal + msgTablero);
-                oponente.getCliente().salida.writeUTF(
-                        juego.getGanador() != null ? "DERROTA. @" + jugadorActual.getIdHilo() + " ganó." + msgTablero
-                                : "EMPATE." + msgTablero);
-
-                juegosManager.terminarPartida(juego);
-
-            } else {
-                salida.writeUTF("Error de juego: " + resultado.replace("ERROR_", ""));
-            }
-
-        } catch (NumberFormatException ex) {
-            salida.writeUTF("Error: Las coordenadas deben ser números enteros.");
-        } catch (IllegalArgumentException ex) {
-            salida.writeUTF("Error: Coordenadas inválidas. Usa formato 'fila,columna' (ej: 1,2).");
+            Thread.sleep(5000); 
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
+        return;
     }
 
+    salida.writeUTF("¡Es tu turno, " + jugadorActual.getMarca()+ "! Ingresa tu movimiento (fila, columna - ej: 1,2):" + juego.obtenerEstadoTablero());
+    String input = entrada.readUTF();
+
+    if (input.equalsIgnoreCase("perder")) {
+        manejarComandoJuego("perder", juego);
+        return;
+    }
+
+    try {
+        String[] coords = input.trim().split(",");
+        if (coords.length != 2)
+            throw new IllegalArgumentException("Formato incorrecto. Deben ser dos números separados por coma.");
+
+        int fila = Integer.parseInt(coords[0].trim());
+        int columna = Integer.parseInt(coords[1].trim());
+
+        String resultado = juego.procesarMovimiento(jugadorActual, new Movimiento(fila, columna));
+
+        if (resultado.equals("VALIDO")) {
+            String msgTablero = juego.obtenerEstadoTablero();
+            String msgTurno = "Turno de @" + juego.getTurnoActual().getIdHilo() + " ("+ juego.getTurnoActual().getMarca() + ")";
+
+            salida.writeUTF("Movimiento exitoso. " + msgTurno + msgTablero);
+            oponente.getCliente().salida.writeUTF("Movimiento de @" + jugadorActual.getIdHilo() + " (" + jugadorActual.getMarca() + "): " + msgTurno + msgTablero);
+
+        } else if (resultado.equals("VICTORIA") || resultado.equals("EMPATE")) {
+                        
+            String nombreJugador = loginHandler.getUsuarioAutenticado();
+            String nombreOponente = oponente.getCliente().loginHandler.getUsuarioAutenticado(); 
+
+            if (resultado.equals("VICTORIA")) {
+                rankingDAO.actualizarEstadisticas(nombreJugador, "VICTORIA");
+                rankingDAO.actualizarEstadisticas(nombreOponente, "DERROTA");       
+                rankingDAO.registrarPartida(nombreJugador, nombreOponente, nombreJugador); 
+                
+            } else if (resultado.equals("EMPATE")) {
+                rankingDAO.actualizarEstadisticas(nombreJugador, "EMPATE");
+                rankingDAO.actualizarEstadisticas(nombreOponente, "EMPATE");
+                rankingDAO.registrarPartida(nombreJugador, nombreOponente, "EMPATE");
+            }
+            
+            String resultadoFinal = resultado.equals("VICTORIA") ? "¡VICTORIA! Has ganado la partida." : "¡EMPATE! El tablero está lleno.";
+            String msgTablero = juego.obtenerEstadoTablero();
+
+            salida.writeUTF(resultadoFinal + msgTablero);
+            oponente.getCliente().salida.writeUTF(juego.getGanador() != null ? "DERROTA. @" + jugadorActual.getIdHilo() + " ganó." + msgTablero: "EMPATE." + msgTablero);
+
+            juegosManager.terminarPartida(juego); 
+
+        } else {
+            salida.writeUTF("Error de juego: " + resultado.replace("ERROR_", ""));
+        }
+
+    } catch (NumberFormatException ex) {
+        salida.writeUTF("Error: Las coordenadas deben ser números enteros.");
+    } catch (IllegalArgumentException ex) {
+        salida.writeUTF("Error: Coordenadas inválidas. Usa formato 'fila,columna' (ej: 1,2).");
+    } catch (SQLException ex) {
+        System.err.println("Error SQL al actualizar ranking: " + ex.getMessage());
+        salida.writeUTF("Error interno al registrar el resultado del juego.");
+    }
+}
     private boolean manejarComandosRanking(String comandoCompleto) throws IOException, SQLException {
     String[] partes = comandoCompleto.trim().split(" ");
     String accion = partes[0].toLowerCase();    
