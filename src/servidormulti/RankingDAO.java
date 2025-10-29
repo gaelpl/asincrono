@@ -2,6 +2,7 @@ package servidormulti;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class RankingDAO {
@@ -45,6 +46,30 @@ public class RankingDAO {
             pstmt.setInt(2, puntos);
             pstmt.setInt(3, puntos); 
             pstmt.executeUpdate();
+        }
+    }
+
+    public String obtenerRankingGeneral() throws SQLException {
+        String sql = "SELECT usuario, puntos, victorias, derrotas, empates FROM RANKING ORDER BY puntos DESC, victorias DESC";
+        
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            
+            StringBuilder sb = new StringBuilder("\n--- RANKING GLOBAL DEL GATO ---\n");
+            sb.append("POS | USUARIO | PTS | V | D | E\n");
+            int pos = 1;
+            
+            while (rs.next()) {
+                sb.append(String.format("%-3d | %-7s | %-3d | %-1d | %-1d | %-1d\n",
+                        pos++,
+                        rs.getString("usuario"),
+                        rs.getInt("puntos"),
+                        rs.getInt("victorias"),
+                        rs.getInt("derrotas"),
+                        rs.getInt("empates")));
+            }
+            return sb.toString();
         }
     }
 }
