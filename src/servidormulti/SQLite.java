@@ -50,6 +50,15 @@ public class SQLite {
                 + "FOREIGN KEY (usuario) REFERENCES USUARIOS(usuario) ON DELETE CASCADE"
                 + ");";
 
+
+        String sqlHistorial = "CREATE TABLE IF NOT EXISTS HISTORIAL_JUEGOS ("
+                + "usuario_a TEXT NOT NULL,"
+                + "usuario_b TEXT NOT NULL,"
+                + "ganador TEXT NOT NULL," 
+                + "FOREIGN KEY (usuario_a) REFERENCES USUARIOS(usuario) ON DELETE CASCADE,"
+                + "FOREIGN KEY (usuario_b) REFERENCES USUARIOS(usuario) ON DELETE CASCADE"
+                + ");";
+                
         // llamo al metodo conectar
         try (Connection conn = conectar();
                 // PreparedStatement es un objeto que representa una sentencia SQL precompilada
