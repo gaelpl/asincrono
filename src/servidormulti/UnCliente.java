@@ -8,7 +8,6 @@ import java.io.InputStreamReader;
 import java.net.Socket;
 import java.sql.SQLException;
 import java.util.Map;
-
 import JuegoDelGato.manejadorDeJuegos;
 import JuegoDelGato.Juego;
 import JuegoDelGato.Jugador;
@@ -22,13 +21,12 @@ public class UnCliente implements Runnable {
     private int intentos = 0;
     private final int intentosMaximos = 3;
     boolean existe = false;
-
     private final comandosDAO comandos = new comandosDAO();
     private ManejadorComandos manejador;
     private final login loginHandler = new login();
     private static manejadorDeJuegos juegosManager = new manejadorDeJuegos();
-    private tiposDeMensajes tiposDeMensajes;
-    private final RankingDAO rankingDAO = new RankingDAO();
+    private tiposDeMensajes tiposDeMensajes; 
+    private final RankingDAO rankingDAO = new RankingDAO(); 
 
     UnCliente(Socket s, String nombreHilo) throws IOException {
         salida = new DataOutputStream(s.getOutputStream());
@@ -61,13 +59,15 @@ public class UnCliente implements Runnable {
 
                 if (puedeMandar) {
                     this.salida.writeUTF(
-                            "Elige la opcion 1:si quieres mandar mensaje general, 2:un usuario en especifico, 3:varios usuarios, o escribe 'bloquear @ID' o 'desbloquear @ID', 'jugar @ID', 'aceptar @ID', 'perder'");
+                            "Elige la opcion 1, 2, 3 o comandos: 'bloquear @ID', 'desbloquear @ID', 'jugar @ID', 'aceptar @ID', 'perder', 'ranking', 'stats @ID @ID'");
                     mensaje = entrada.readUTF();
 
                     if (manejarComandoJuego(mensaje, juegoActivo)) {
                         continue;
                     }
-
+                    if (manejarComandosRanking(mensaje, rankingDAO)) { 
+                        continue;
+                    }
                     try {
                         if (manejador.manejarComandoDeBloqueo(mensaje)) {
                             continue;
@@ -113,12 +113,9 @@ public class UnCliente implements Runnable {
             }
 
             try {
-                if (entrada != null)
-                    entrada.close();
-                if (salida != null)
-                    salida.close();
-            } catch (IOException e) {
-                /* Ignorar */ }
+                if (entrada != null) entrada.close();
+                if (salida != null) salida.close();
+            } catch (IOException e) { /* Ignorar */ }
             ServidorMulti.clientes.remove(this.nombreHilo);
         }
     }
@@ -146,11 +143,11 @@ public class UnCliente implements Runnable {
             salida.writeUTF("¡Inicio de sesión exitoso! Puedes enviar mensajes ilimitados.");
         }
     }
-
+    
     private boolean manejarComandoJuego(String comandoCompleto, Juego juegoActivo) throws IOException {
         String[] partes = comandoCompleto.trim().split(" ");
         String accion = partes[0].toLowerCase();
-
+        
         if (accion.equals("perder")) {
             if (juegoActivo != null && juegoActivo.estaActivo()) {
                 Jugador ganador = juegoActivo.forzarVictoria(this.nombreHilo);
@@ -176,6 +173,7 @@ public class UnCliente implements Runnable {
         if (!accion.equals("jugar") && !accion.equals("aceptar")) {
             return false;
         }
+        
         if (nombreDestino == null) {
             salida.writeUTF("Error: Debes especificar un usuario con @NombreDeUsuario.");
             return true;
@@ -198,6 +196,7 @@ public class UnCliente implements Runnable {
             System.err.println("Error SQL al traducir nombre: " + e.getMessage());
             return true;
         }
+        
         if (accion.equals("jugar")) {
             return manejarPropuesta(idHiloDestino, nombreDestino);
         } else if (accion.equals("aceptar")) {
@@ -223,7 +222,6 @@ public class UnCliente implements Runnable {
         clienteDestino.salida.writeUTF("El usuario @" + miNombre + " te reta. Escribe 'aceptar @"
                 + miNombre + "' para aceptar.");
         this.salida.writeUTF("Reto enviado a @" + nombreDestino + ". Esperando respuesta...");
-
         return true;
     }
 
@@ -269,15 +267,16 @@ public class UnCliente implements Runnable {
     }
 
     private void manejarTurnoDeJuego(Juego juego) throws IOException {
-    Jugador jugadorActual = juego.getJugador(this.nombreHilo);
-    Jugador oponente = juego.getContrincante(jugadorActual);    
     RankingDAO rankingDAO = new RankingDAO(); 
+    
+    Jugador jugadorActual = juego.getJugador(this.nombreHilo);
+    Jugador oponente = juego.getContrincante(jugadorActual); 
     
     if (!juego.getTurnoActual().getIdHilo().equals(this.nombreHilo)) {
         salida.writeUTF("Esperando movimiento de @" + juego.getTurnoActual().getIdHilo() + " ("
                 + juego.getTurnoActual().getMarca() + ")... Tablero:" + juego.obtenerEstadoTablero());
         try {
-            Thread.sleep(5000); 
+            Thread.sleep(500); 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -299,24 +298,28 @@ public class UnCliente implements Runnable {
 
         int fila = Integer.parseInt(coords[0].trim());
         int columna = Integer.parseInt(coords[1].trim());
-
         String resultado = juego.procesarMovimiento(jugadorActual, new Movimiento(fila, columna));
 
         if (resultado.equals("VALIDO")) {
-            String msgTablero = juego.obtenerEstadoTablero();
-            String msgTurno = "Turno de @" + juego.getTurnoActual().getIdHilo() + " ("+ juego.getTurnoActual().getMarca() + ")";
-
-            salida.writeUTF("Movimiento exitoso. " + msgTurno + msgTablero);
-            oponente.getCliente().salida.writeUTF("Movimiento de @" + jugadorActual.getIdHilo() + " (" + jugadorActual.getMarca() + "): " + msgTurno + msgTablero);
 
         } else if (resultado.equals("VICTORIA") || resultado.equals("EMPATE")) {
-                        
-            String nombreJugador = loginHandler.getUsuarioAutenticado();
-            String nombreOponente = oponente.getCliente().loginHandler.getUsuarioAutenticado(); 
+            
+            String nombreJugador = loginHandler.getUsuarioAutenticado(); 
+            String nombreOponente;
+            
+            try {
+                nombreOponente = comandos.obtenerUsuarioPorIdHilo(oponente.getIdHilo());
+                
+                if (nombreOponente == null) nombreOponente = oponente.getIdHilo();
+                
+            } catch (SQLException e) {
+                nombreOponente = oponente.getIdHilo(); 
+                System.err.println("Error SQL al obtener nombre del oponente: " + e.getMessage());
+            }
 
             if (resultado.equals("VICTORIA")) {
                 rankingDAO.actualizarEstadisticas(nombreJugador, "VICTORIA");
-                rankingDAO.actualizarEstadisticas(nombreOponente, "DERROTA");       
+                rankingDAO.actualizarEstadisticas(nombreOponente, "DERROTA"); 
                 rankingDAO.registrarPartida(nombreJugador, nombreOponente, nombreJugador); 
                 
             } else if (resultado.equals("EMPATE")) {
@@ -346,23 +349,23 @@ public class UnCliente implements Runnable {
         salida.writeUTF("Error interno al registrar el resultado del juego.");
     }
 }
-    private boolean manejarComandosRanking(String comandoCompleto) throws IOException, SQLException {
+    private boolean manejarComandosRanking(String comandoCompleto, RankingDAO rankingDAO) throws IOException, SQLException {
     String[] partes = comandoCompleto.trim().split(" ");
-    String accion = partes[0].toLowerCase();    
-    RankingDAO rankingDAO = new RankingDAO(); 
-
+    String accion = partes[0].toLowerCase();
+    
     if (accion.equals("ranking")) {
         String ranking = rankingDAO.obtenerRankingGeneral();
         salida.writeUTF(ranking);
         return true;
     } 
     else if (accion.equals("stats") && partes.length == 3) {
+        
         String nombre1 = partes[1].startsWith("@") ? partes[1].substring(1) : partes[1];
         String nombre2 = partes[2].startsWith("@") ? partes[2].substring(1) : partes[2];
         
         Map<String, Double> porcentajes = rankingDAO.obtenerPorcentajeVictorias(nombre1, nombre2);
         
-        if (porcentajes.get(nombre1) != null) {
+        if (porcentajes.containsKey(nombre1)) {
             String resultado = String.format(
                 "\n--- ENFRENTAMIENTO DIRECTO (%s vs %s) ---\n" +
                 "%s: %.1f%% Victorias | %s: %.1f%% Victorias | Empates: %.1f%%\n",
@@ -379,5 +382,5 @@ public class UnCliente implements Runnable {
     }
     return false;
 }
-
+    
 }
