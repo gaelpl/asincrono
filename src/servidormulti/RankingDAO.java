@@ -8,7 +8,7 @@ import java.sql.SQLException;
 public class RankingDAO {
     private static final int PUNTOS_VICTORIA = 2;
     private static final int PUNTOS_EMPATE = 1;
-    
+
     private Connection getConnection() throws SQLException {
         return ServidorMulti.getManejador().conectar();
     }
@@ -35,31 +35,31 @@ public class RankingDAO {
         }
 
         String sql = "INSERT INTO RANKING (usuario, puntos, " + campo + ") VALUES (?, ?, 1) "
-                   + "ON CONFLICT(usuario) DO UPDATE SET "
-                   + "puntos = puntos + ?,"
-                   + campo + " = " + campo + " + 1;";
+                + "ON CONFLICT(usuario) DO UPDATE SET "
+                + "puntos = puntos + ?,"
+                + campo + " = " + campo + " + 1;";
 
         try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, usuario);
             pstmt.setInt(2, puntos);
-            pstmt.setInt(3, puntos); 
+            pstmt.setInt(3, puntos);
             pstmt.executeUpdate();
         }
     }
 
     public String obtenerRankingGeneral() throws SQLException {
         String sql = "SELECT usuario, puntos, victorias, derrotas, empates FROM RANKING ORDER BY puntos DESC, victorias DESC";
-        
+
         try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql);
-             ResultSet rs = pstmt.executeQuery()) {
-            
+                PreparedStatement pstmt = conn.prepareStatement(sql);
+                ResultSet rs = pstmt.executeQuery()) {
+
             StringBuilder sb = new StringBuilder("\n--- RANKING GLOBAL DEL GATO ---\n");
             sb.append("POS | USUARIO | PTS | V | D | E\n");
             int pos = 1;
-            
+
             while (rs.next()) {
                 sb.append(String.format("%-3d | %-7s | %-3d | %-1d | %-1d | %-1d\n",
                         pos++,
@@ -70,6 +70,21 @@ public class RankingDAO {
                         rs.getInt("empates")));
             }
             return sb.toString();
+        }
+    }
+
+    public void registrarPartida(String user1, String user2, String ganador) throws SQLException {
+        String usuario_a = user1.compareTo(user2) < 0 ? user1 : user2;
+        String usuario_b = user1.compareTo(user2) < 0 ? user2 : user1;
+
+        String sql = "INSERT INTO HISTORIAL_JUEGOS (usuario_a, usuario_b, ganador) VALUES (?, ?, ?)";
+
+        try (Connection conn = getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, usuario_a);
+            pstmt.setString(2, usuario_b);
+            pstmt.setString(3, ganador);
+            pstmt.executeUpdate();
         }
     }
 }
