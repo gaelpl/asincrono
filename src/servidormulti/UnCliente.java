@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.sql.SQLException;
+import java.util.Map;
+
 import JuegoDelGato.manejadorDeJuegos;
 import JuegoDelGato.Juego;
 import JuegoDelGato.Jugador;
@@ -26,6 +28,7 @@ public class UnCliente implements Runnable {
     private final login loginHandler = new login();
     private static manejadorDeJuegos juegosManager = new manejadorDeJuegos();
     private tiposDeMensajes tiposDeMensajes;
+    private final RankingDAO rankingDAO = new RankingDAO();
 
     UnCliente(Socket s, String nombreHilo) throws IOException {
         salida = new DataOutputStream(s.getOutputStream());
@@ -325,5 +328,39 @@ public class UnCliente implements Runnable {
             salida.writeUTF("Error: Coordenadas inválidas. Usa formato 'fila,columna' (ej: 1,2).");
         }
     }
+
+    private boolean manejarComandosRanking(String comandoCompleto) throws IOException, SQLException {
+    String[] partes = comandoCompleto.trim().split(" ");
+    String accion = partes[0].toLowerCase();    
+    RankingDAO rankingDAO = new RankingDAO(); 
+
+    if (accion.equals("ranking")) {
+        String ranking = rankingDAO.obtenerRankingGeneral();
+        salida.writeUTF(ranking);
+        return true;
+    } 
+    else if (accion.equals("stats") && partes.length == 3) {
+        String nombre1 = partes[1].startsWith("@") ? partes[1].substring(1) : partes[1];
+        String nombre2 = partes[2].startsWith("@") ? partes[2].substring(1) : partes[2];
+        
+        Map<String, Double> porcentajes = rankingDAO.obtenerPorcentajeVictorias(nombre1, nombre2);
+        
+        if (porcentajes.get(nombre1) != null) {
+            String resultado = String.format(
+                "\n--- ENFRENTAMIENTO DIRECTO (%s vs %s) ---\n" +
+                "%s: %.1f%% Victorias | %s: %.1f%% Victorias | Empates: %.1f%%\n",
+                nombre1, nombre2,
+                nombre1, porcentajes.get(nombre1),
+                nombre2, porcentajes.get(nombre2),
+                porcentajes.get("EMPATE")
+            );
+            salida.writeUTF(resultado);
+        } else {
+            salida.writeUTF("Error: Uno o ambos usuarios no existen o no han jugado entre sí.");
+        }
+        return true;
+    }
+    return false;
+}
 
 }
