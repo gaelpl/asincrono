@@ -50,24 +50,58 @@ public class SQLite {
                 + "FOREIGN KEY (usuario) REFERENCES USUARIOS(usuario) ON DELETE CASCADE"
                 + ");";
 
-
         String sqlHistorial = "CREATE TABLE IF NOT EXISTS HISTORIAL_JUEGOS ("
                 + "usuario_a TEXT NOT NULL,"
                 + "usuario_b TEXT NOT NULL,"
-                + "ganador TEXT NOT NULL," 
+                + "ganador TEXT NOT NULL,"
                 + "FOREIGN KEY (usuario_a) REFERENCES USUARIOS(usuario) ON DELETE CASCADE,"
                 + "FOREIGN KEY (usuario_b) REFERENCES USUARIOS(usuario) ON DELETE CASCADE"
+                + ");";
+
+        String sqlGrupos = "CREATE TABLE IF NOT EXISTS GRUPOS ("
+                + "nombre TEXT PRIMARY KEY NOT NULL"
+                + ");";
+
+        String sqlMembresia = "CREATE TABLE IF NOT EXISTS MEMBRESIA ("
+                + "usuario TEXT NOT NULL,"
+                + "grupo TEXT NOT NULL,"
+                + "ultimo_mensaje_visto INTEGER DEFAULT 0,"
+                + "PRIMARY KEY (usuario, grupo),"
+                + "FOREIGN KEY (usuario) REFERENCES USUARIOS(usuario) ON DELETE CASCADE,"
+                + "FOREIGN KEY (grupo) REFERENCES GRUPOS(nombre) ON DELETE CASCADE"
+                + ");";
+
+        String sqlMensajes = "CREATE TABLE IF NOT EXISTS MENSAJES ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + "grupo TEXT NOT NULL,"
+                + "emisor TEXT NOT NULL,"
+                + "contenido TEXT NOT NULL,"
+                + "fecha INTEGER NOT NULL,"
+                + "FOREIGN KEY (grupo) REFERENCES GRUPOS(nombre) ON DELETE CASCADE"
                 + ");";
                 
         // llamo al metodo conectar
         try (Connection conn = conectar();
-                // PreparedStatement es un objeto que representa una sentencia SQL precompilada
                 PreparedStatement pstmtUsuarios = conn.prepareStatement(sqlUsuarios);
-                PreparedStatement pstmtBloqueos = conn.prepareStatement(sqlBloqueos)) {
-
+                PreparedStatement pstmtBloqueos = conn.prepareStatement(sqlBloqueos);
+                PreparedStatement pstmtRanking = conn.prepareStatement(sqlRanking);
+                PreparedStatement pstmtHistorial = conn.prepareStatement(sqlHistorial);
+                PreparedStatement pstmtGrupos = conn.prepareStatement(sqlGrupos);
+                PreparedStatement pstmtMembresia = conn.prepareStatement(sqlMembresia);
+                PreparedStatement pstmtMensajes = conn.prepareStatement(sqlMensajes);
+                PreparedStatement pstmtInsertTodos = conn.prepareStatement("INSERT OR IGNORE INTO GRUPOS (nombre) VALUES ('Todos')")) {
+            // 3. Ejecutar todos los comandos CREATE TABLE
             pstmtUsuarios.executeUpdate();
             pstmtBloqueos.executeUpdate();
-            System.out.println("comandos ejecutados.");
+            pstmtRanking.executeUpdate();
+            pstmtHistorial.executeUpdate();
+            pstmtGrupos.executeUpdate();
+            pstmtMembresia.executeUpdate();
+            pstmtMensajes.executeUpdate();
+
+            pstmtInsertTodos.executeUpdate();
+
+            System.out.println("Esquema de base de datos y grupo 'Todos' creados exitosamente.");
 
         } catch (SQLException e) {
             System.err.println("Error FATAL al crear las tablas: " + e.getMessage());
