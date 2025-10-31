@@ -87,10 +87,10 @@ public class comandosDAO {
     public void actualizarIdHilo(String usuario, String nuevoIdHilo) throws SQLException {
         String sql = "UPDATE USUARIOS SET id_hilo = ? WHERE usuario = ?";
         try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
-            pstmt.setString(1, nuevoIdHilo); 
-            pstmt.setString(2, usuario);    
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, nuevoIdHilo);
+            pstmt.setString(2, usuario);
             pstmt.executeUpdate();
         }
     }
@@ -98,8 +98,8 @@ public class comandosDAO {
     public String obtenerIdHilo(String usuario) throws SQLException {
         String sql = "SELECT id_hilo FROM USUARIOS WHERE usuario = ?";
         try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
             pstmt.setString(1, usuario);
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
@@ -110,18 +110,38 @@ public class comandosDAO {
     }
 
     public String obtenerUsuarioPorIdHilo(String idHilo) throws SQLException {
-    String sql = "SELECT usuario FROM USUARIOS WHERE id_hilo = ?";
-    try (Connection conn = getConnection();
-         PreparedStatement pstmt = conn.prepareStatement(sql)) {
-        
-        pstmt.setString(1, idHilo); 
-        ResultSet rs = pstmt.executeQuery();
-        
-        if (rs.next()) {
-            return rs.getString("usuario"); 
+        String sql = "SELECT usuario FROM USUARIOS WHERE id_hilo = ?";
+        try (Connection conn = getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, idHilo);
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getString("usuario");
+            }
+            return idHilo;
         }
-        return idHilo;
     }
-}
+
+    public boolean crearGrupo(String nombreGrupo) throws SQLException {
+        String sql = "INSERT INTO GRUPOS (nombre) VALUES (?)";
+        try (Connection conn = getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, nombreGrupo);
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    public boolean borrarGrupo(String nombreGrupo) throws SQLException {
+        if (nombreGrupo.equalsIgnoreCase("Todos"))
+            return false; 
+        String sql = "DELETE FROM GRUPOS WHERE nombre = ?";
+        try (Connection conn = getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, nombreGrupo);
+            return pstmt.executeUpdate() > 0;
+        }
+    }
 
 }
