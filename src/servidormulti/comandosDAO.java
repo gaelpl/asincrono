@@ -135,12 +135,34 @@ public class comandosDAO {
 
     public boolean borrarGrupo(String nombreGrupo) throws SQLException {
         if (nombreGrupo.equalsIgnoreCase("Todos"))
-            return false; 
+            return false;
         String sql = "DELETE FROM GRUPOS WHERE nombre = ?";
         try (Connection conn = getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, nombreGrupo);
             return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    public boolean unirseAGrupo(String usuario, String grupo) throws SQLException {
+        String sql = "INSERT OR IGNORE INTO MEMBRESIA (usuario, grupo) VALUES (?, ?)";
+        try (Connection conn = getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, usuario);
+            pstmt.setString(2, grupo);
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    public void abandonarGrupo(String usuario, String grupo) throws SQLException {
+        if (grupo.equalsIgnoreCase("Todos"))
+            return;
+        String sql = "DELETE FROM MEMBRESIA WHERE usuario = ? AND grupo = ?";
+        try (Connection conn = getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, usuario);
+            pstmt.setString(2, grupo);
+            pstmt.executeUpdate();
         }
     }
 
