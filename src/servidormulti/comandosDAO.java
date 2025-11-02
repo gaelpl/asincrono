@@ -166,4 +166,18 @@ public class comandosDAO {
         }
     }
 
+    public boolean esMiembro(String usuario, String grupo) throws SQLException {
+    String sql = "SELECT 1 FROM MEMBRESIA WHERE usuario = ? AND grupo = ?";
+    
+    try (Connection conn = getConnection();
+         PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        
+        pstmt.setString(1, usuario);
+        pstmt.setString(2, grupo);
+        
+        ResultSet rs = pstmt.executeQuery();
+        return rs.next(); 
+    }
+}
+
 }
