@@ -13,6 +13,9 @@ public class tiposDeMensajes {
     private final String miIdHilo;
     private final boolean existe;
     private final login loginHandler;
+    private final String emisorDB;
+    private final String displayNombre;
+    private final String grupoActual;
 
     public tiposDeMensajes(UnCliente cliente, comandosDAO comandos, login loginHandler) {
         this.salida = cliente.salida;
@@ -21,7 +24,10 @@ public class tiposDeMensajes {
         this.miIdHilo = cliente.nombreHilo;
         this.existe = cliente.existe;
         this.loginHandler = loginHandler;
-    }
+        this.grupoActual = cliente.grupoActual;
+        String usuarioAutenticado = cliente.existe ? loginHandler.getUsuarioAutenticado() : cliente.nombreHilo;
+        this.emisorDB = usuarioAutenticado;
+        this.displayNombre = usuarioAutenticado;    }
 
     public boolean manejarOpcionesChat(String mensaje) throws IOException {
         boolean mensajeValido = false;
@@ -49,6 +55,9 @@ public class tiposDeMensajes {
 
         for (UnCliente cliente : ServidorMulti.clientes.values()) {
             if (cliente.nombreHilo.equals(this.miIdHilo)) {
+                continue;
+            }
+            if (!cliente.grupoActual.equals(this.grupoActual)) {
                 continue;
             }
 
