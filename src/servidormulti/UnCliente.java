@@ -27,6 +27,8 @@ public class UnCliente implements Runnable {
     private static manejadorDeJuegos juegosManager = new manejadorDeJuegos();
     private tiposDeMensajes tiposDeMensajes; 
     private final RankingDAO rankingDAO = new RankingDAO(); 
+    public String grupoActual = "Todos"; 
+    private ManejadorGrupo grupoHandler;
 
     UnCliente(Socket s, String nombreHilo) throws IOException {
         salida = new DataOutputStream(s.getOutputStream());
@@ -34,6 +36,7 @@ public class UnCliente implements Runnable {
         this.nombreHilo = nombreHilo;
         this.manejador = new ManejadorComandos(comandos, nombreHilo, salida);
         this.tiposDeMensajes = new tiposDeMensajes(this, comandos, loginHandler);
+        this.grupoHandler = new ManejadorGrupo(this, comandos, loginHandler);
     }
 
     @Override
@@ -59,8 +62,19 @@ public class UnCliente implements Runnable {
 
                 if (puedeMandar) {
                     this.salida.writeUTF(
-                            "Elige la opcion 1, 2, 3 o comandos: 'bloquear @ID', 'desbloquear @ID', 'jugar @ID', 'aceptar @ID', 'perder', 'ranking', 'stats @ID @ID'");
+                            "GRUPO ACTUAL: #" + grupoActual + " | Opciones: 1, 2, 3 o comandos: 'join #G', 'create #G', 'leave #G', 'bloquear @ID', 'jugar @nomre de usuario', 'ranking'");mensaje = entrada.readUTF();
+
                     mensaje = entrada.readUTF();
+                            
+                    try {
+                        if (grupoHandler.manejarComandosDeGrupo(mensaje)) {
+                            continue;
+                        }
+                    } catch (SQLException e) {
+                        salida.writeUTF("Error interno: Fallo en la base de datos al manejar grupos.");
+                        System.err.println("Error SQL en grupos: " + e.getMessage());
+                        continue;
+                    }
 
                     if (manejarComandoJuego(mensaje, juegoActivo)) {
                         continue;
