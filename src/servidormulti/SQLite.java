@@ -6,24 +6,28 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 public class SQLite {
-    // url de la base de datos
+    // URL de la base de datos
     private static final String URL = "jdbc:sqlite:datos.db";
 
     public SQLite() {
         try {
-            // aqui pido cargar el driver JDBC
+            // Cargar el driver JDBC
             Class.forName("org.sqlite.JDBC");
             System.out.println("Driver JDBC de SQLite cargado.");
             crearTablas();
         } catch (ClassNotFoundException e) {
-            System.err
-                    .println("Error: Driver JDBC de SQLite no encontrado. Asegúrate de tener el JAR en el classpath.");
+            System.err.println("Error: Driver JDBC de SQLite no encontrado. Asegúrate de tener el JAR en el classpath.");
         }
-
     }
 
     public Connection conectar() throws SQLException {
-        return DriverManager.getConnection(URL);
+        Connection conn = DriverManager.getConnection(URL);
+
+        // Activar llaves foráneas
+        try (PreparedStatement pstmt = conn.prepareStatement("PRAGMA foreign_keys = ON;")) {
+            pstmt.executeUpdate();
+        }
+        return conn;
     }
 
     private void crearTablas() {
@@ -31,6 +35,10 @@ public class SQLite {
                 + "usuario TEXT PRIMARY KEY NOT NULL,"
                 + "contrasena TEXT NOT NULL,"
                 + "id_hilo TEXT"
+                + ");";
+
+        String sqlGrupos = "CREATE TABLE IF NOT EXISTS GRUPOS ("
+                + "nombre TEXT PRIMARY KEY NOT NULL"
                 + ");";
 
         String sqlBloqueos = "CREATE TABLE IF NOT EXISTS BLOQUEOS ("
@@ -58,10 +66,6 @@ public class SQLite {
                 + "FOREIGN KEY (usuario_b) REFERENCES USUARIOS(usuario) ON DELETE CASCADE"
                 + ");";
 
-        String sqlGrupos = "CREATE TABLE IF NOT EXISTS GRUPOS ("
-                + "nombre TEXT PRIMARY KEY NOT NULL"
-                + ");";
-
         String sqlMembresia = "CREATE TABLE IF NOT EXISTS MEMBRESIA ("
                 + "usuario TEXT NOT NULL,"
                 + "grupo TEXT NOT NULL,"
@@ -79,27 +83,23 @@ public class SQLite {
                 + "fecha INTEGER NOT NULL,"
                 + "FOREIGN KEY (grupo) REFERENCES GRUPOS(nombre) ON DELETE CASCADE"
                 + ");";
-                
-        // llamo al metodo conectar
-        try (Connection conn = conectar();
-                PreparedStatement pstmtUsuarios = conn.prepareStatement(sqlUsuarios);
-                PreparedStatement pstmtBloqueos = conn.prepareStatement(sqlBloqueos);
-                PreparedStatement pstmtRanking = conn.prepareStatement(sqlRanking);
-                PreparedStatement pstmtHistorial = conn.prepareStatement(sqlHistorial);
-                PreparedStatement pstmtGrupos = conn.prepareStatement(sqlGrupos);
-                PreparedStatement pstmtMembresia = conn.prepareStatement(sqlMembresia);
-                PreparedStatement pstmtMensajes = conn.prepareStatement(sqlMensajes);
-                PreparedStatement pstmtInsertTodos = conn.prepareStatement("INSERT OR IGNORE INTO GRUPOS (nombre) VALUES ('Todos')")) {
-            // 3. Ejecutar todos los comandos CREATE TABLE
-            pstmtUsuarios.executeUpdate();
-            pstmtBloqueos.executeUpdate();
-            pstmtRanking.executeUpdate();
-            pstmtHistorial.executeUpdate();
-            pstmtGrupos.executeUpdate();
-            pstmtMembresia.executeUpdate();
-            pstmtMensajes.executeUpdate();
 
-            pstmtInsertTodos.executeUpdate();
+        try (Connection conn = conectar()) {
+
+            // Crear las tablas una por una
+            try (PreparedStatement ps = conn.prepareStatement(sqlUsuarios)) { ps.executeUpdate(); }
+            try (PreparedStatement ps = conn.prepareStatement(sqlGrupos)) { ps.executeUpdate(); }
+            try (PreparedStatement ps = conn.prepareStatement(sqlBloqueos)) { ps.executeUpdate(); }
+            try (PreparedStatement ps = conn.prepareStatement(sqlRanking)) { ps.executeUpdate(); }
+            try (PreparedStatement ps = conn.prepareStatement(sqlHistorial)) { ps.executeUpdate(); }
+            try (PreparedStatement ps = conn.prepareStatement(sqlMembresia)) { ps.executeUpdate(); }
+            try (PreparedStatement ps = conn.prepareStatement(sqlMensajes)) { ps.executeUpdate(); }
+
+            // Insertar el grupo "Todos" una vez que la tabla GRUPOS existe
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "INSERT OR IGNORE INTO GRUPOS (nombre) VALUES ('Todos')")) {
+                ps.executeUpdate();
+            }
 
             System.out.println("Esquema de base de datos y grupo 'Todos' creados exitosamente.");
 
@@ -108,3 +108,4 @@ public class SQLite {
         }
     }
 }
+

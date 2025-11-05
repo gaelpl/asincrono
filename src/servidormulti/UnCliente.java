@@ -62,12 +62,12 @@ public class UnCliente implements Runnable {
 
                 if (puedeMandar) {
                     this.salida.writeUTF(
-                            "GRUPO ACTUAL: #" + grupoActual + " | Opciones: 1, 2, 3 o comandos: 'join #G', 'create #G', 'leave #G', 'bloquear @ID', 'jugar @nomre de usuario', 'ranking'");mensaje = entrada.readUTF();
+                            "GRUPO ACTUAL: #" + grupoActual + " | Opciones: 1, 2, 3 o comandos: 'joingroup #', 'creategroup #', 'leave #G', 'bloquear @ID', 'jugar @nomre de usuario', 'ranking'");
 
                     mensaje = entrada.readUTF();
                             
                     try {
-                        if (grupoHandler.manejarComandosDeGrupo(mensaje)) {
+                        if (grupoHandler.manejarComandosDeGrupo(mensaje, existe)) {
                             continue;
                         }
                     } catch (SQLException e) {

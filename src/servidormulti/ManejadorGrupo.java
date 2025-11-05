@@ -3,7 +3,7 @@ package servidormulti;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.sql.SQLException;
-import JuegoDelGato.manejadorDeJuegos;
+import JuegoDelGato.manejadorDeJuegos; 
 
 public class ManejadorGrupo {
 
@@ -11,7 +11,6 @@ public class ManejadorGrupo {
     private final DataOutputStream salida;
     private final login loginHandler;
     private final String miIdHilo;
-    private final boolean existe;
     private UnCliente cliente; 
 
     public ManejadorGrupo(UnCliente cliente, comandosDAO comandos, login loginHandler) {
@@ -20,10 +19,11 @@ public class ManejadorGrupo {
         this.salida = cliente.salida;
         this.loginHandler = loginHandler;
         this.miIdHilo = cliente.nombreHilo;
-        this.existe = cliente.existe;
     }
 
-    public boolean manejarComandosDeGrupo(String input) throws IOException, SQLException {
+    public boolean manejarComandosDeGrupo(String input, boolean estaLogueado) throws IOException, SQLException {
+        estaLogueado = cliente.existe; 
+        
         String[] partes = input.trim().split(" ");
         String accion = partes[0].toLowerCase();
 
@@ -39,18 +39,18 @@ public class ManejadorGrupo {
         }
 
         if (accion.equals("creategroup")) {
-            return crearNuevoGrupo(nombreGrupo);
+            return crearNuevoGrupo(nombreGrupo, estaLogueado);
         } else if (accion.equals("joingroup")) {
-            return unirseAGrupo(nombreGrupo);
+            return unirseAGrupo(nombreGrupo, estaLogueado);
         } else if (accion.equals("leavegroup")) {
-            return abandonarGrupo(nombreGrupo);
+            return abandonarGrupo(nombreGrupo, estaLogueado);
         }
         
         return false;
     }
 
-    private boolean crearNuevoGrupo(String nombreGrupo) throws IOException, SQLException {
-        if (!existe) {
+    private boolean crearNuevoGrupo(String nombreGrupo, boolean estaLogueado) throws IOException, SQLException {
+        if (!estaLogueado) { 
             salida.writeUTF("Error: Solo los usuarios registrados pueden crear grupos.");
             return true;
         }
@@ -68,10 +68,10 @@ public class ManejadorGrupo {
         return true;
     }
 
-    private boolean unirseAGrupo(String nombreGrupo) throws IOException, SQLException {
-        String usuarioDB = existe ? loginHandler.getUsuarioAutenticado() : miIdHilo;
+    private boolean unirseAGrupo(String nombreGrupo, boolean estaLogueado) throws IOException, SQLException {
+        String usuarioDB = estaLogueado ? loginHandler.getUsuarioAutenticado() : miIdHilo; 
         
-        if (!existe && !nombreGrupo.equalsIgnoreCase("Todos")) {
+        if (!estaLogueado && !nombreGrupo.equalsIgnoreCase("Todos")) {
             salida.writeUTF("Error: Solo los usuarios registrados pueden unirse a grupos específicos.");
             return true;
         }
@@ -90,12 +90,12 @@ public class ManejadorGrupo {
         return true;
     }
 
-    private boolean abandonarGrupo(String nombreGrupo) throws IOException, SQLException {
+    private boolean abandonarGrupo(String nombreGrupo, boolean estaLogueado) throws IOException, SQLException {
         if (nombreGrupo.equalsIgnoreCase("Todos")) {
             salida.writeUTF("Error: No puedes abandonar el grupo 'Todos'.");
             return true;
         }
-        if (!existe) {
+        if (!estaLogueado) { 
              salida.writeUTF("Error: Los invitados no pueden abandonar ni crear grupos.");
              return true;
         }
@@ -108,5 +108,4 @@ public class ManejadorGrupo {
         salida.writeUTF("Has abandonado el grupo #" + nombreGrupo + ". Vuelves a 'Todos'.");
         return true;
     }
-    
 }
