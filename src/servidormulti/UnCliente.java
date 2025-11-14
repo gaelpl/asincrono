@@ -62,9 +62,14 @@ public class UnCliente implements Runnable {
 
                 if (puedeMandar) {
                     this.salida.writeUTF(
-                            "GRUPO ACTUAL: #" + grupoActual + " | Opciones: 1, 2, 3 o comandos: 'joingroup #', 'creategroup #', 'leave #G', 'bloquear @ID', 'jugar @nomre de usuario', 'ranking'");
+                            "GRUPO ACTUAL: #" + grupoActual + " | Opciones: 1, 2, 3 o comandos: 'joingroup #', 'creategroup #', 'leave #G', 'bloquear @ID', 'jugar @nomre de usuario', 'ranking', , 'salir'");
 
                     mensaje = entrada.readUTF();
+
+                    if (mensaje.equalsIgnoreCase("salir")) {
+                        salida.writeUTF("Adiós. Conexión cerrada.");
+                        break; 
+                    }
                             
                     try {
                         if (grupoHandler.manejarComandosDeGrupo(mensaje, existe)) {
