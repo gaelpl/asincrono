@@ -70,6 +70,15 @@ public class UnCliente implements Runnable {
                         salida.writeUTF("Adiós. Conexión cerrada.");
                         break; 
                     }
+
+                    if (!existe) {
+                        intentos++;
+                        int restantes = intentosMaximos - intentos;
+                    if (restantes > 0) {
+                        this.salida.writeUTF(
+                                "Tienes " + restantes + " mensajes restantes antes de requerir login/registro.");
+                    }
+                   }
                             
                     try {
                         if (grupoHandler.manejarComandosDeGrupo(mensaje, existe)) {
@@ -104,12 +113,6 @@ public class UnCliente implements Runnable {
                 boolean mensajeValido = tiposDeMensajes.manejarOpcionesChat(mensaje);
 
                 if (mensajeValido && !existe) {
-                    intentos++;
-                    int restantes = intentosMaximos - intentos;
-                    if (restantes > 0) {
-                        this.salida.writeUTF(
-                                "Tienes " + restantes + " mensajes restantes antes de requerir login/registro.");
-                    }
                 }
             }
         } catch (Exception ex) {
