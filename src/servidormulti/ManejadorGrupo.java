@@ -27,7 +27,7 @@ public class ManejadorGrupo {
         String[] partes = input.trim().split(" ");
         String accion = partes[0].toLowerCase();
 
-        if (!accion.equals("creategroup") && !accion.equals("joingroup") && !accion.equals("leavegroup")) {
+        if (!accion.equals("creargrupo") && !accion.equals("unirsegrupo") && !accion.equals("abandonargrupo")) {
             return false;
         }
 
@@ -38,11 +38,11 @@ public class ManejadorGrupo {
              return true;
         }
 
-        if (accion.equals("creategroup")) {
+        if (accion.equals("creargrupo")) {
             return crearNuevoGrupo(nombreGrupo, estaLogueado);
-        } else if (accion.equals("joingroup")) {
+        } else if (accion.equals("unirsegrupo")) {
             return unirseAGrupo(nombreGrupo, estaLogueado);
-        } else if (accion.equals("leavegroup")) {
+        } else if (accion.equals("abandonargrupo")) {
             return abandonarGrupo(nombreGrupo, estaLogueado);
         }
         

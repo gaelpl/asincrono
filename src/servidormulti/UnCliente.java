@@ -63,7 +63,7 @@ public class UnCliente implements Runnable {
                 if (puedeMandar) {
                     this.salida.writeUTF(
                             "GRUPO ACTUAL: #" + grupoActual
-                                    + " | Opciones: 1, 2, 3 o comandos: 'joingroup #', 'creategroup #', 'leave #G', 'bloquear @ID', 'jugar @nomre de usuario', 'ranking', 'usuarios', 'salir'");
+                                    + " | Opciones: 1(mensaje general), 2(mensaje privado), 3(mensaje a varios) o comandos: 'unirsegrupo #', 'creargrupo #', 'abandonargrupo #', 'bloquear @ID', 'jugar @nomre de usuario', 'ranking', 'usuarios', 'salir'");
 
                     mensaje = entrada.readUTF();
 
