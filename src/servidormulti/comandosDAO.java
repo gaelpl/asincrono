@@ -167,17 +167,39 @@ public class comandosDAO {
     }
 
     public boolean esMiembro(String usuario, String grupo) throws SQLException {
-    String sql = "SELECT 1 FROM MEMBRESIA WHERE usuario = ? AND grupo = ?";
-    
-    try (Connection conn = getConnection();
-         PreparedStatement pstmt = conn.prepareStatement(sql)) {
-        
-        pstmt.setString(1, usuario);
-        pstmt.setString(2, grupo);
-        
-        ResultSet rs = pstmt.executeQuery();
-        return rs.next(); 
+        String sql = "SELECT 1 FROM MEMBRESIA WHERE usuario = ? AND grupo = ?";
+
+        try (Connection conn = getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, usuario);
+            pstmt.setString(2, grupo);
+
+            ResultSet rs = pstmt.executeQuery();
+            return rs.next();
+        }
     }
-}
+
+    public String obtenerUsuariosRegistrados() throws SQLException {
+        String sql = "SELECT usuario FROM USUARIOS ORDER BY usuario";
+        try (Connection conn = getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(sql);
+                ResultSet rs = pstmt.executeQuery()) {
+
+            StringBuilder sb = new StringBuilder("\nUsuarios registrados\n");
+            int count = 0;
+
+            while (rs.next()) {
+                sb.append(rs.getString("usuario")).append(", ");
+                count++;
+            }
+
+            if (count > 0) {
+                sb.setLength(sb.length() - 2);
+            }
+            sb.append("\n--");
+            return sb.toString();
+        }
+    }
 
 }
