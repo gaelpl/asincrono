@@ -30,6 +30,8 @@ public class UnCliente implements Runnable {
     public String grupoActual = "Todos";
     private ManejadorGrupo grupoHandler;
 
+    private final Registro registroHandler = new Registro();
+
     UnCliente(Socket s, String nombreHilo) throws IOException {
         salida = new DataOutputStream(s.getOutputStream());
         entrada = new DataInputStream(s.getInputStream());
@@ -39,119 +41,138 @@ public class UnCliente implements Runnable {
         this.grupoHandler = new ManejadorGrupo(this, comandos, loginHandler);
     }
 
-    @Override
+        @Override
     public void run() {
-        String mensaje = "";
-        Registro registro = new Registro();
-
         try {
             while (true) {
-                if (!existe && intentos >= intentosMaximos) {
-                    salida.writeUTF("se te acabaron los mensajes, inicia sesion o registrate");
-                    exigirLoginRegister(loginHandler, registro);
+                if (manejarAutenticacionForzada()) {
+                    continue;
                 }
-
+                
                 Juego juegoActivo = juegosManager.getJuegoActivo(this.nombreHilo);
-
                 if (juegoActivo != null && juegoActivo.estaActivo()) {
                     manejarTurnoDeJuego(juegoActivo);
                     continue;
                 }
-
-                boolean puedeMandar = existe || (intentos < intentosMaximos);
-
-                if (puedeMandar) {
-                    this.salida.writeUTF(
-                            "GRUPO ACTUAL: #" + grupoActual
-                                    + " | Opciones: 1(mensaje general), 2(mensaje privado), 3(mensaje a varios) o comandos: 'unirsegrupo #', 'creargrupo #', 'abandonargrupo #', 'bloquear @ID', 'jugar @nomre de usuario', 'ranking', 'usuarios', 'salir'");
-
-                    mensaje = entrada.readUTF();
-
-                    if (mensaje.equalsIgnoreCase("salir")) {
-                        salida.writeUTF("Adiós. Conexión cerrada.");
-                        break;
-                    }
-
-                    if (mensaje.equalsIgnoreCase("usuarios")) {
-                        try {
-                            salida.writeUTF(comandos.obtenerUsuariosRegistrados());
-                        } catch (SQLException e) {
-                            salida.writeUTF("Error interno al consultar usuarios.");
-                        }
-                        continue;
-                    }
-
-                    if (!existe) {
-                        intentos++;
-                        int restantes = intentosMaximos - intentos;
-                        if (restantes > 0) {
-                            this.salida.writeUTF(
-                                    "Tienes " + restantes + " mensajes restantes antes de requerir login/registro.");
-                        }
-                    }
-
-                    try {
-                        if (grupoHandler.manejarComandosDeGrupo(mensaje, existe)) {
-                            continue;
-                        }
-                    } catch (SQLException e) {
-                        salida.writeUTF("Error interno: Fallo en la base de datos al manejar grupos.");
-                        System.err.println("Error SQL en grupos: " + e.getMessage());
-                        continue;
-                    }
-
-                    if (manejarComandoJuego(mensaje, juegoActivo)) {
-                        continue;
-                    }
-                    if (manejarComandosRanking(mensaje, rankingDAO)) {
-                        continue;
-                    }
-                    try {
-                        if (manejador.manejarComandoDeBloqueo(mensaje)) {
-                            continue;
-                        }
-                    } catch (SQLException e) {
-                        salida.writeUTF("Error interno: Fallo en la base de datos al procesar comando.");
-                        System.err.println("Error SQL en comando de cliente: " + e.getMessage());
-                        continue;
-                    }
-                } else {
-                    this.salida.writeUTF("Solo puedes recibir mensajes. Por favor, autentícate para enviar.");
-                    continue;
-                }
-
-                boolean mensajeValido = tiposDeMensajes.manejarOpcionesChat(mensaje);
-
-                if (mensajeValido && !existe) {
+                
+                if (!procesarMensajeDeChat(juegoActivo)) {
+                    break; 
                 }
             }
+        } catch (IOException ex) {
+            String msgError = ex.getMessage() != null && ex.getMessage().toLowerCase().contains("connection reset") ? 
+                              "El cliente se desconectó abruptamente (Conexión Reiniciada)." : 
+                              ex.getMessage();
+            System.err.println("[FIN DE HILO POR RED] Hilo @" + this.nombreHilo + ": " + msgError);
         } catch (Exception ex) {
-            System.err.println("Error en el hilo de cliente: " + ex.getMessage());
+            System.err.println("[FIN DE HILO POR ERROR GENERAL] Hilo @" + this.nombreHilo + ". Error: " + ex.getMessage());
         } finally {
+            limpiarRecursosYFinalizar();
+        }
+    }
+        
+    private boolean manejarAutenticacionForzada() throws IOException {
+        if (!existe && intentos >= intentosMaximos) {
+            salida.writeUTF("Se te acabaron los mensajes. Por favor, inicia sesión o regístrate.");
+            exigirLoginRegister(loginHandler, registroHandler);
+            return true;
+        }
+        return false;
+    }
 
-            Juego juego = juegosManager.getJuegoActivo(this.nombreHilo);
-            if (juego != null && juego.estaActivo()) {
-                Jugador ganador = juego.forzarVictoria(this.nombreHilo);
-                if (ganador != null) {
-                    try {
-                        ganador.getCliente().salida.writeUTF(
-                                "Ganaste la partida contra @" + this.nombreHilo + " por rendición/desconexión.");
-                    } catch (IOException e) {
-                        System.err.println("Advertencia: El ganador (@" + ganador.getIdHilo()
-                                + ") se desconectó antes de recibir la notificación de victoria.");
-                    }
+    private boolean procesarMensajeDeChat(Juego juegoActivo) throws IOException, SQLException {
+        boolean puedeMandar = existe || (intentos < intentosMaximos);
+
+        if (!puedeMandar) {
+            this.salida.writeUTF("Solo puedes recibir mensajes. Por favor, autentícate para enviar.");
+            return true; 
+        }
+
+        mostrarMenu();
+        String mensaje = entrada.readUTF();
+
+        if (mensaje.equalsIgnoreCase("salir")) {
+            salida.writeUTF("Adiós. Conexión cerrada.");
+            return false; 
+        }
+        
+        if (manejarComandoUsuarios(mensaje)) return true;
+        if (manejarComandoGrupo(mensaje)) return true;
+        if (manejarComandoJuego(mensaje, juegoActivo)) return true;
+        if (manejarComandosRanking(mensaje, rankingDAO)) return true;
+        if (manejador.manejarComandoDeBloqueo(mensaje)) return true;
+        if (!existe) {
+            contarIntentoInvalido();
+        }
+
+        tiposDeMensajes.manejarOpcionesChat(mensaje);
+        
+        return true; 
+    }
+    
+    private void limpiarRecursosYFinalizar() {
+        Juego juego = juegosManager.getJuegoActivo(this.nombreHilo);
+        if (juego != null && juego.estaActivo()) {
+            Jugador ganador = juego.forzarVictoria(this.nombreHilo);
+            if (ganador != null) {
+                try {
+                    ganador.getCliente().salida.writeUTF(
+                            "Ganaste la partida contra @" + this.nombreHilo + " por rendición/desconexión.");
+                } catch (IOException e) {
+                    System.err.println("Advertencia: El ganador (@" + ganador.getIdHilo()
+                            + ") se desconectó antes de recibir la notificación de victoria.");
                 }
-                juegosManager.terminarPartida(juego);
             }
+            juegosManager.terminarPartida(juego);
+        }
+        try {
+            if (entrada != null) entrada.close();
+            if (salida != null) salida.close();
+        } catch (IOException e) {
+        }
+        ServidorMulti.clientes.remove(this.nombreHilo);
+        System.out.println("Cliente @" + this.nombreHilo + " desconectado y recursos liberados.");
+    }
+    
+    private void mostrarMenu() throws IOException {
+        String menu = String.format(
+            "\n--- CHAT: GRUPO #%s ---\n" +
+            "| Opciones de Chat: 1(General), 2(Privado @U), 3(A Varios @u,@u)\n" +
+            "| Comandos de Chat: 'unirsegrupo #', 'creargrupo #', 'abandonargrupo #', 'bloquear @ID'\n" +
+            "| Comandos de Juego: 'jugar @usuario', 'perder', 'ranking', 'stats @u1 @u2'\n" +
+            "| Comandos Generales: 'usuarios', 'salir'",
+            grupoActual
+        );
+        this.salida.writeUTF(menu);
+    }
 
+    private boolean manejarComandoUsuarios(String mensaje) throws IOException {
+        if (mensaje.equalsIgnoreCase("usuarios")) {
             try {
-                if (entrada != null)
-                    entrada.close();
-                if (salida != null)
-                    salida.close();
-            } catch (IOException e) {
-                /* Ignorar */ }
-            ServidorMulti.clientes.remove(this.nombreHilo);
+                salida.writeUTF(comandos.obtenerUsuariosRegistrados());
+            } catch (SQLException e) {
+                salida.writeUTF("Error interno al consultar usuarios.");
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private boolean manejarComandoGrupo(String mensaje) throws IOException, SQLException {
+        try {
+            return grupoHandler.manejarComandosDeGrupo(mensaje, existe);
+        } catch (SQLException e) {
+            salida.writeUTF("Error interno: Fallo en la base de datos al manejar grupos.");
+            System.err.println("Error SQL en grupos: " + e.getMessage());
+            return true;
+        }
+    }
+    
+    private void contarIntentoInvalido() throws IOException {
+        intentos++;
+        int restantes = intentosMaximos - intentos;
+        if (restantes > 0) {
+            this.salida.writeUTF("Tienes " + restantes + " mensajes restantes antes de requerir login/registro.");
         }
     }
 
